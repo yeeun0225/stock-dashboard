@@ -1,89 +1,38 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
-interface HeatmapConfig {
+interface Tab {
   label: string
   flag: string
-  exchanges?: string[]
-  dataSource?: string
-  grouping: string
+  src: string
 }
 
-const TABS: HeatmapConfig[] = [
+const BASE = 'https://s.tradingview.com/embed-widget/stock-heatmap/?locale=kr&colorTheme=dark&blockSize=market_cap_basic&blockColor=change&isZoomEnabled=true&hasSymbolTooltip=true&hasTopBar=false&width=100%25&height=400'
+
+const TABS: Tab[] = [
   {
     label: '미국',
     flag: '🇺🇸',
-    dataSource: 'SPX500',
-    grouping: 'sector',
+    src: `${BASE}&dataSource=SPX500&grouping=sector`,
   },
   {
     label: '한국',
     flag: '🇰🇷',
-    dataSource: 'AllKR',
-    grouping: 'sector',
+    src: `${BASE}&dataSource=AllKR&grouping=sector`,
   },
   {
     label: '일본',
     flag: '🇯🇵',
-    dataSource: 'NI225',
-    grouping: 'sector',
+    src: `${BASE}&dataSource=NI225&grouping=sector`,
   },
 ]
-
-function HeatmapWidget({ config }: { config: HeatmapConfig }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    containerRef.current.innerHTML = ''
-
-    const widgetDiv = document.createElement('div')
-    widgetDiv.className = 'tradingview-widget-container__widget'
-    containerRef.current.appendChild(widgetDiv)
-
-    const script = document.createElement('script')
-    script.src =
-      'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js'
-    script.async = true
-    script.innerHTML = JSON.stringify({
-      exchanges: config.exchanges ?? [],
-      dataSource: config.dataSource ?? '',
-      grouping: config.grouping,
-      blockSize: 'market_cap_basic',
-      blockColor: 'change',
-      locale: 'kr',
-      colorTheme: 'dark',
-      hasTopBar: false,
-      isDataSetEnabled: false,
-      isZoomEnabled: true,
-      hasSymbolTooltip: true,
-      isMonoSize: false,
-      width: '100%',
-      height: '400',
-    })
-
-    containerRef.current.appendChild(script)
-
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = ''
-    }
-  }, [config])
-
-  return (
-    <div
-      ref={containerRef}
-      className="tradingview-widget-container w-full rounded-lg overflow-hidden"
-    />
-  )
-}
 
 export default function MarketHeatmap() {
   const [active, setActive] = useState(0)
 
   return (
     <div className="bg-gray-900 rounded-xl p-4 flex flex-col gap-3 border border-gray-800 col-span-2 md:col-span-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           증시 히트맵
@@ -98,7 +47,6 @@ export default function MarketHeatmap() {
         </a>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-gray-800 rounded-lg p-1 w-fit">
         {TABS.map((tab, i) => (
           <button
@@ -116,8 +64,14 @@ export default function MarketHeatmap() {
         ))}
       </div>
 
-      {/* Widget */}
-      <HeatmapWidget config={TABS[active]} />
+      <iframe
+        key={active}
+        src={TABS[active].src}
+        width="100%"
+        height="400"
+        className="rounded-lg border-0"
+        allowFullScreen
+      />
     </div>
   )
 }
