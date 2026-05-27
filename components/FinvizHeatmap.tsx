@@ -5,28 +5,35 @@ import { useState } from 'react'
 interface Tab {
   label: string
   flag: string
-  src: string
+  dataSource: string
 }
 
-const BASE = 'https://s.tradingview.com/embed-widget/stock-heatmap/?locale=kr&colorTheme=dark&blockSize=market_cap_basic&blockColor=change&isZoomEnabled=true&hasSymbolTooltip=true&hasTopBar=false&width=100%25&height=400'
-
 const TABS: Tab[] = [
-  {
-    label: '미국',
-    flag: '🇺🇸',
-    src: `${BASE}&dataSource=SPX500&grouping=sector`,
-  },
-  {
-    label: '한국',
-    flag: '🇰🇷',
-    src: `${BASE}&dataSource=AllKR&grouping=sector`,
-  },
-  {
-    label: '일본',
-    flag: '🇯🇵',
-    src: `${BASE}&dataSource=NI225&grouping=sector`,
-  },
+  { label: '미국', flag: '🇺🇸', dataSource: 'SPX500' },
+  { label: '한국', flag: '🇰🇷', dataSource: 'AllKR' },
+  { label: '일본', flag: '🇯🇵', dataSource: 'NI225' },
 ]
+
+function buildUrl(dataSource: string): string {
+  const config = {
+    exchanges: [],
+    dataSource,
+    grouping: 'sector',
+    blockSize: 'market_cap_basic',
+    blockColor: 'change',
+    colorTheme: 'dark',
+    hasTopBar: false,
+    isZoomEnabled: true,
+    hasSymbolTooltip: true,
+    width: '100%',
+    height: 400,
+  }
+  // TradingView embed 위젯은 파라미터를 hash(#)에 JSON으로 넘겨야 함
+  return (
+    'https://s.tradingview.com/embed-widget/stock-heatmap/?locale=kr#' +
+    encodeURIComponent(JSON.stringify(config))
+  )
+}
 
 export default function MarketHeatmap() {
   const [active, setActive] = useState(0)
@@ -66,7 +73,7 @@ export default function MarketHeatmap() {
 
       <iframe
         key={active}
-        src={TABS[active].src}
+        src={buildUrl(TABS[active].dataSource)}
         width="100%"
         height="400"
         className="rounded-lg border-0"
