@@ -20,14 +20,14 @@ const TABS: HeatmapConfig[] = [
   {
     label: '한국',
     flag: '🇰🇷',
-    dataSource: 'KOSPI',
-    grouping: 'no_group',
+    dataSource: 'AllKR',
+    grouping: 'sector',
   },
   {
     label: '일본',
     flag: '🇯🇵',
-    dataSource: 'TOPIX',
-    grouping: 'no_group',
+    dataSource: 'NI225',
+    grouping: 'sector',
   },
 ]
 
