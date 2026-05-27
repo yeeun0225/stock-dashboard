@@ -2,42 +2,12 @@ import { Suspense } from 'react'
 import Header from '@/components/Header'
 import MacroGrid from '@/components/MacroGrid'
 import AutoRefresh from '@/components/AutoRefresh'
-import type { MarketData, FearGreedData } from '@/lib/types'
-
-async function fetchMarket(): Promise<MarketData | null> {
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ??
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/market`, { cache: 'no-store' })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
-  }
-}
-
-async function fetchFearGreed(): Promise<FearGreedData | null> {
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ??
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store' })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
-  }
-}
+import { fetchMarketData, fetchFearGreedData } from '@/lib/market-data'
 
 async function Dashboard() {
   const [market, fearGreed] = await Promise.all([
-    fetchMarket(),
-    fetchFearGreed(),
+    fetchMarketData(),
+    fetchFearGreedData(),
   ])
 
   return (
