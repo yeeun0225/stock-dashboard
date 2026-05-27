@@ -1,25 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef } from 'react'
 
-// Finviz heatmap URLs to try in order
-const HEATMAP_URLS = [
-  'https://finviz.com/map.ashx?t=sec&st=d1',
-  'https://finviz.com/map.ashx?t=sec',
-]
+export default function TradingViewHeatmap() {
+  const containerRef = useRef<HTMLDivElement>(null)
 
-export default function FinvizHeatmap() {
-  const [urlIdx, setUrlIdx] = useState(0)
-  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    if (!containerRef.current) return
 
-  function handleError() {
-    const next = urlIdx + 1
-    if (next < HEATMAP_URLS.length) {
-      setUrlIdx(next)
-    } else {
-      setFailed(true)
+    // Clear previous widget if any (e.g. hot reload)
+    containerRef.current.innerHTML = ''
+
+    const widgetDiv = document.createElement('div')
+    widgetDiv.className = 'tradingview-widget-container__widget'
+    containerRef.current.appendChild(widgetDiv)
+
+    const script = document.createElement('script')
+    script.src =
+      'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js'
+    script.async = true
+    script.innerHTML = JSON.stringify({
+      exchanges: [],
+      dataSource: 'SPX500',
+      grouping: 'sector',
+      blockSize: 'market_cap_basic',
+      blockColor: 'change',
+      locale: 'kr',
+      colorTheme: 'dark',
+      hasTopBar: false,
+      isDataSetEnabled: false,
+      isZoomEnabled: true,
+      hasSymbolTooltip: true,
+      isMonoSize: false,
+      width: '100%',
+      height: '400',
+    })
+
+    containerRef.current.appendChild(script)
+
+    return () => {
+      if (containerRef.current) containerRef.current.innerHTML = ''
     }
-  }
+  }, [])
 
   return (
     <div className="bg-gray-900 rounded-xl p-4 flex flex-col gap-2 border border-gray-800 col-span-2 md:col-span-3">
@@ -28,39 +50,18 @@ export default function FinvizHeatmap() {
           S&amp;P 500 섹터 히트맵
         </h2>
         <a
-          href="https://finviz.com/map.ashx?t=sec"
+          href="https://www.tradingview.com"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-blue-400 hover:text-blue-300"
         >
-          Finviz ↗
+          TradingView ↗
         </a>
       </div>
-
-      {failed ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-2 text-gray-500">
-          <span className="text-2xl">📊</span>
-          <p className="text-sm">히트맵은 Finviz에서 직접 확인하세요</p>
-          <a
-            href="https://finviz.com/map.ashx?t=sec"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-400 hover:underline"
-          >
-            Finviz 히트맵 보기 →
-          </a>
-        </div>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={urlIdx}
-          src={HEATMAP_URLS[urlIdx]}
-          alt="S&P 500 섹터 히트맵"
-          className="w-full rounded-lg object-contain"
-          referrerPolicy="no-referrer"
-          onError={handleError}
-        />
-      )}
+      <div
+        ref={containerRef}
+        className="tradingview-widget-container w-full rounded-lg overflow-hidden"
+      />
     </div>
   )
 }
