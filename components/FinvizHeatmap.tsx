@@ -1,14 +1,41 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-export default function TradingViewHeatmap() {
+interface HeatmapConfig {
+  label: string
+  flag: string
+  exchanges?: string[]
+  dataSource?: string
+  grouping: string
+}
+
+const TABS: HeatmapConfig[] = [
+  {
+    label: '미국',
+    flag: '🇺🇸',
+    dataSource: 'SPX500',
+    grouping: 'sector',
+  },
+  {
+    label: '한국',
+    flag: '🇰🇷',
+    exchanges: ['KRX'],
+    grouping: 'sector',
+  },
+  {
+    label: '일본',
+    flag: '🇯🇵',
+    exchanges: ['TSE'],
+    grouping: 'sector',
+  },
+]
+
+function HeatmapWidget({ config }: { config: HeatmapConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
-
-    // Clear previous widget if any (e.g. hot reload)
     containerRef.current.innerHTML = ''
 
     const widgetDiv = document.createElement('div')
@@ -20,9 +47,9 @@ export default function TradingViewHeatmap() {
       'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js'
     script.async = true
     script.innerHTML = JSON.stringify({
-      exchanges: [],
-      dataSource: 'SPX500',
-      grouping: 'sector',
+      ...(config.exchanges ? { exchanges: config.exchanges } : { exchanges: [] }),
+      ...(config.dataSource ? { dataSource: config.dataSource } : {}),
+      grouping: config.grouping,
       blockSize: 'market_cap_basic',
       blockColor: 'change',
       locale: 'kr',
@@ -41,13 +68,25 @@ export default function TradingViewHeatmap() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = ''
     }
-  }, [])
+  }, [config])
 
   return (
-    <div className="bg-gray-900 rounded-xl p-4 flex flex-col gap-2 border border-gray-800 col-span-2 md:col-span-3">
+    <div
+      ref={containerRef}
+      className="tradingview-widget-container w-full rounded-lg overflow-hidden"
+    />
+  )
+}
+
+export default function MarketHeatmap() {
+  const [active, setActive] = useState(0)
+
+  return (
+    <div className="bg-gray-900 rounded-xl p-4 flex flex-col gap-3 border border-gray-800 col-span-2 md:col-span-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          S&amp;P 500 섹터 히트맵
+          증시 히트맵
         </h2>
         <a
           href="https://www.tradingview.com"
@@ -58,10 +97,27 @@ export default function TradingViewHeatmap() {
           TradingView ↗
         </a>
       </div>
-      <div
-        ref={containerRef}
-        className="tradingview-widget-container w-full rounded-lg overflow-hidden"
-      />
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-800 rounded-lg p-1 w-fit">
+        {TABS.map((tab, i) => (
+          <button
+            key={tab.label}
+            onClick={() => setActive(i)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              active === i
+                ? 'bg-gray-600 text-white'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <span>{tab.flag}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Widget */}
+      <HeatmapWidget config={TABS[active]} />
     </div>
   )
 }
