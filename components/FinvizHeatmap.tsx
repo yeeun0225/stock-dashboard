@@ -20,14 +20,14 @@ const TABS: HeatmapConfig[] = [
   {
     label: '한국',
     flag: '🇰🇷',
-    exchanges: ['KRX'],
-    grouping: 'sector',
+    dataSource: 'KOSPI',
+    grouping: 'no_group',
   },
   {
     label: '일본',
     flag: '🇯🇵',
-    exchanges: ['TSE'],
-    grouping: 'sector',
+    dataSource: 'TOPIX',
+    grouping: 'no_group',
   },
 ]
 
@@ -47,8 +47,8 @@ function HeatmapWidget({ config }: { config: HeatmapConfig }) {
       'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js'
     script.async = true
     script.innerHTML = JSON.stringify({
-      ...(config.exchanges ? { exchanges: config.exchanges } : { exchanges: [] }),
-      ...(config.dataSource ? { dataSource: config.dataSource } : {}),
+      exchanges: config.exchanges ?? [],
+      dataSource: config.dataSource ?? '',
       grouping: config.grouping,
       blockSize: 'market_cap_basic',
       blockColor: 'change',
