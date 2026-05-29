@@ -23,6 +23,7 @@ export interface MarketData {
     gold: QuoteData
     silver: QuoteData
     copper: QuoteData
+    lithium: QuoteData
   }
   timestamp: number
 }

@@ -31,8 +31,8 @@ export default function FearGreedGauge({ value, classification }: Props) {
   const circumference = Math.PI * r
   const progress = (clamp / 100) * circumference
 
-  // Needle angle: -90deg (left) to +90deg (right)
-  const angle = -90 + (clamp / 100) * 180
+  // Needle angle: 180deg (left/fear) → 270deg (top/neutral) → 360deg (right/greed)
+  const angle = 180 + (clamp / 100) * 180
   const rad = (angle * Math.PI) / 180
   const nx = cx + r * Math.cos(rad)
   const ny = cy + r * Math.sin(rad)

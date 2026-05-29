@@ -50,6 +50,7 @@ export default function MacroGrid({ market, fearGreed }: Props) {
         { label: '금 (GC)', q: { ...m.commodities.gold, symbol: 'GC=F' } },
         { label: '은 (SI)', q: { ...m.commodities.silver, symbol: 'SI=F' } },
         { label: '구리 (HG)', q: { ...m.commodities.copper, symbol: 'HG=F' } },
+        { label: '리튬 (LIT)', q: { ...m.commodities.lithium, symbol: 'LIT' } },
       ])
     : []
 

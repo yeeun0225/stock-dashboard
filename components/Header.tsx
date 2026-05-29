@@ -1,4 +1,5 @@
-import { calcWeather, formatUpdateTime } from '@/lib/market-utils'
+import { calcWeather } from '@/lib/market-utils'
+import ClientTimestamp from './ClientTimestamp'
 import type { MarketData } from '@/lib/types'
 
 interface Props {
@@ -23,7 +24,7 @@ export default function Header({ market }: Props) {
         </span>
         <div>
           <h1 className="text-base font-bold text-white leading-tight">
-            모닝 대시보드
+            Money loves me
           </h1>
           {weather && (
             <p className="text-xs text-gray-400">
@@ -36,7 +37,7 @@ export default function Header({ market }: Props) {
       <div className="text-right">
         <p className="text-xs text-gray-500">업데이트</p>
         <p className="text-xs text-gray-300 tabular-nums">
-          {market ? formatUpdateTime(market.timestamp) : '—'}
+          <ClientTimestamp />
         </p>
       </div>
     </header>

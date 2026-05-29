@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { YieldsAPIData, YieldPoint } from '@/app/api/yields/route'
 import type { CommoditiesAPIData, CommodityItem } from '@/app/api/commodities/route'
 import type { MmfTipsData } from '@/app/api/mmf-tips/route'
@@ -150,6 +151,137 @@ function yoyColor(yoy: number): string {
 function formatMonth(dateStr: string): string {
   const parts = dateStr.split('-')
   return `${parts[0].slice(2)}.${parseInt(parts[1], 10)}`
+}
+
+// ── 정보 팝업 ────────────────────────────────────────────
+interface InfoItem { label: string; text: string }
+
+function InfoPopup({ title, summary, items }: {
+  title: string; summary: string; items: InfoItem[]
+}) {
+  const [open, setOpen]       = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  const popup = (
+    <>
+      {/* 백드롭 — 클릭하면 닫힘 */}
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+        className="bg-black/50"
+        onClick={() => setOpen(false)}
+      />
+      {/* 팝업 — 화면 정중앙 고정 */}
+      <div
+        style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 9999 }}
+        className="w-80 max-w-[calc(100vw-32px)] max-h-[75vh] bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl flex flex-col"
+      >
+        {/* 헤더 — 고정 */}
+        <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3 border-b border-gray-800 shrink-0">
+          <p className="text-sm font-bold text-white leading-snug">{title}</p>
+          <button onClick={() => setOpen(false)}
+            className="shrink-0 text-gray-500 hover:text-white text-xl leading-none mt-0.5">×</button>
+        </div>
+        {/* 내용 — 스크롤 */}
+        <div className="overflow-y-auto flex-1 px-4 py-3 flex flex-col gap-3">
+          <p className="text-xs text-gray-400 leading-relaxed">{summary}</p>
+          <div className="flex flex-col gap-3 border-t border-gray-800 pt-3">
+            {items.map(it => (
+              <div key={it.label}>
+                <p className="text-xs font-semibold text-blue-400 mb-0.5">{it.label}</p>
+                <p className="text-xs text-gray-400 leading-relaxed">{it.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+
+  return (
+    <>
+      <button ref={btnRef} onClick={() => setOpen(v => !v)}
+        className="w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white text-xs font-bold flex items-center justify-center transition-colors shrink-0"
+        aria-label="설명 보기">?</button>
+      {mounted && open && createPortal(popup, document.body)}
+    </>
+  )
+}
+
+// ── 팝업 내용 정의 ────────────────────────────────────────
+const INFO = {
+  mmfTips: {
+    title: 'MMF 자금흐름 + TIPS 실질금리를 왜 봐야 할까?',
+    summary: 'MMF는 투자자들의 "안전 대피 수준"을 실시간으로 보여주고, TIPS 실질금리는 주식·채권의 실질 할인율 역할을 해요. 이 둘을 같이 보면 시장이 지금 위험을 얼마나 두려워하는지 파악할 수 있어요.',
+    items: [
+      {
+        label: 'MMF 총자산 — 공포 온도계',
+        text: '머니마켓펀드는 주식·채권 대신 단기 국채·CD에만 투자하는 초안전 상품이에요. 주식 시장이 흔들리면 투자자들이 MMF로 피신하면서 잔액이 급증해요. 반대로 잔액이 줄기 시작하면 그 돈이 다시 위험자산으로 돌아온다는 신호입니다. 2025년 현재 약 7조 달러가 MMF에 쌓여 있어요.',
+      },
+      {
+        label: '1W · 4W 변화 — 방향이 핵심',
+        text: '수치 절대값보다 방향이 중요해요. 4주 연속 유입이면 위험회피 강화 중, 4주 연속 유출이면 위험선호 회복 중이에요. 주가 바닥권에서 MMF 유출이 급증하면 랠리 시작의 신호일 수 있어요.',
+      },
+      {
+        label: 'TIPS 실질금리 — 주식 밸류에이션의 적',
+        text: '명목 국채금리에서 시장의 기대인플레이션을 뺀 값이에요. 이게 높아질수록 "안전하게 이 정도 실질 수익을 보장받을 수 있는데 굳이 위험한 주식을 살 이유가 있나?" 라는 논리로 주식 밸류에이션이 압박받아요. 2022년 실질금리 0%→2%+ 급등이 나스닥 -33% 폭락의 핵심 원인이었어요.',
+      },
+      {
+        label: '5Y vs 10Y 실질금리 연관성',
+        text: '5Y가 10Y보다 높으면 단기 물가 압박이 더 심한 것, 10Y가 더 높으면 장기적 긴축 우려가 크다는 의미예요. 두 금리가 동시에 하락하면 Fed 피벗 기대감이 퍼지는 구간이에요.',
+      },
+    ],
+  },
+  rrpSofr: {
+    title: 'ON RRP + SOFR 유동성 흐름을 왜 봐야 할까?',
+    summary: '금융 시스템 안에 "물"이 얼마나 차 있는지 보는 수위계예요. RRP가 줄어들면 시장에 유동성이 넘치는 것이고, SOFR이 튀면 단기 자금이 부족하다는 경고입니다.',
+    items: [
+      {
+        label: 'ON RRP 잔액 — 시중 유동성의 역방향 지표',
+        text: 'Fed가 은행·MMF로부터 하루짜리로 돈을 빌려가는 창구예요. 잔액이 많다 = 시장에 돈이 너무 많아서 갈 곳이 없다는 뜻이에요. 반대로 잔액이 줄면 그 돈이 국채 매입·대출·주식 투자로 흘러들어 가요. 2022~2024년 2.5조$ → 수백억$ 감소는 역대급 유동성 방출이었어요.',
+      },
+      {
+        label: 'RRP 감소 트렌드가 왜 중요한가',
+        text: 'QT(양적 긴축)로 Fed가 돈을 거둬가도, RRP에 쌓인 돈이 시장으로 나오면 실제 유동성 충격이 완화돼요. RRP가 소진되면 그때부터는 QT가 진짜 시장 유동성을 건드리게 됩니다. 지금 RRP 잔액이 어느 수준인지가 "유동성 절벽"의 타이밍을 가늠하는 핵심이에요.',
+      },
+      {
+        label: 'SOFR — 실제 단기 자금 비용',
+        text: '미국 금융기관들이 미국 국채를 담보로 하루짜리 자금을 조달하는 실제 금리예요. 이론상 Fed 기준금리 범위 안에서 움직여야 정상인데, 크게 이탈하면 담보 자산 부족이나 자금 수요 폭증 신호예요. 2019년 레포 위기 때 SOFR이 하루에 10%p 급등하면서 Fed가 긴급 개입했어요.',
+      },
+      {
+        label: 'RRP ↓ + SOFR 안정 = 골디락스 유동성',
+        text: 'RRP 잔액이 줄면서 SOFR이 안정적이면 유동성이 시스템에 풍부하게 공급되는 이상적인 상태예요. 반면 RRP 소진 후 SOFR 급등이 나타나면 유동성 경색의 초기 신호이니 주의가 필요해요.',
+      },
+    ],
+  },
+  inflation: {
+    title: '인플레이션 히트맵을 왜 봐야 할까?',
+    summary: 'Fed 금리 결정의 99%는 인플레이션 데이터로 결정돼요. 색상이 빨갈수록 금리 인하는 멀어지고, 초록일수록 가까워져요. 히트맵 하나로 금리 방향을 직관적으로 읽을 수 있어요.',
+    items: [
+      {
+        label: 'CPI vs 근원 CPI — 노이즈 vs 신호',
+        text: '헤드라인 CPI는 에너지·식품 가격이 포함돼 월별 변동이 커요. 유가 하나로 수치가 확 내려갈 수 있어요. 근원 CPI(음식·에너지 제외)는 훨씬 끈적하고 지속적이에요. Fed는 헤드라인을 보되 근원 CPI를 더 신뢰해요. 두 수치가 같이 내려와야 진짜 물가 하락이에요.',
+      },
+      {
+        label: 'PCE · 근원 PCE — Fed의 공식 타겟',
+        text: 'Fed가 "물가 안정"을 판단할 때 공식 기준으로 쓰는 지표예요. 목표치는 근원 PCE 2%예요. CPI보다 약 0.3~0.5%p 낮게 나오는 경향이 있어서, CPI가 3%여도 PCE가 2.5%면 Fed 입장에서는 그리 나쁘지 않아요. 이 수치가 2% 이상 유지되는 한 금리 인하는 어렵습니다.',
+      },
+      {
+        label: 'PPI 최종수요 — 1~2개월 선행 지표',
+        text: '기업들이 받는 도매 판매가격이에요. PPI가 오르면 기업들이 원가 상승분을 소비자 가격(CPI)에 전가할 가능성이 높아져요. PPI가 먼저 꺾이면 CPI도 곧 따라 내려오는 경향이 있어요. 특히 PPI 서비스 항목은 임금과 연동되니 주목해야 해요.',
+      },
+      {
+        label: '평균 시간급 — 서비스 인플레의 뿌리',
+        text: '임금이 오르면 기업 원가가 오르고 → 서비스 가격이 오르고 → 물가가 잡히지 않는 악순환이 생겨요. 특히 미국은 GDP의 70%가 소비인데, 임금 상승이 지속되면 소비가 계속 받쳐줘서 인플레가 끈적하게 됩니다. Fed가 가장 걱정하는 시나리오가 "임금-물가 나선형"이에요.',
+      },
+      {
+        label: '색상으로 금리 방향 읽기',
+        text: '초록(1.5~2.5%) = Fed 목표 달성 → 금리 인하 가능. 노랑/주황(2.5~5%) = 아직 경계 → 동결 또는 인상. 빨강(5%+) = 과열 → 추가 인상 위험. 파랑(0% 미만) = 디플레 → 경기침체 우려로 인하 가능. 6개월 열이 점점 초록으로 변해가면 금리 인하 사이클 진입 신호예요.',
+      },
+    ],
+  },
 }
 
 // ── 로딩/에러 공통 ─────────────────────────────────────────
@@ -388,14 +520,17 @@ export default function LiquidityPage() {
 
         {/* ── MMF 자금흐름 + TIPS 실질금리 ── */}
         <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold text-white">MMF 자금흐름 · TIPS 실질금리</p>
-            <p className="text-xs text-gray-500 mt-0.5">머니마켓펀드 잔액(안전선호 지표) + 물가연동국채 실질수익률</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-sm font-semibold text-white">MMF 자금흐름 · TIPS 실질금리</p>
+              <p className="text-xs text-gray-500 mt-0.5">머니마켓펀드 잔액(안전선호 지표) + 물가연동국채 실질수익률</p>
+            </div>
+            <InfoPopup {...INFO.mmfTips} />
           </div>
 
           {mmfLoading ? <LoadingBox /> : mmfTips ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* MMF 패널 */}
+              {/* MMF 패널 - dummy comment to preserve structure */}
               <div className="bg-gray-800/50 rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">MMF 총 자산</span>
@@ -466,9 +601,12 @@ export default function LiquidityPage() {
 
         {/* ── ON RRP + SOFR 유동성 흐름 ── */}
         <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold text-white">ON RRP · SOFR 유동성 흐름</p>
-            <p className="text-xs text-gray-500 mt-0.5">연준 역레포 잔액 + 단기 담보금리 — 최근 60 거래일</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-sm font-semibold text-white">ON RRP · SOFR 유동성 흐름</p>
+              <p className="text-xs text-gray-500 mt-0.5">연준 역레포 잔액 + 단기 담보금리 — 최근 60 거래일</p>
+            </div>
+            <InfoPopup {...INFO.rrpSofr} />
           </div>
 
           {flowLoading ? <LoadingBox /> : liqFlow ? (
@@ -496,9 +634,12 @@ export default function LiquidityPage() {
 
         {/* ── 인플레이션 히트맵 ── */}
         <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-semibold text-white">인플레이션 히트맵</p>
-            <p className="text-xs text-gray-500 mt-0.5">CPI · PPI · PCE · 임금 전년동기비(YoY %) — 최근 6개월</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-sm font-semibold text-white">인플레이션 히트맵</p>
+              <p className="text-xs text-gray-500 mt-0.5">CPI · PPI · PCE · 임금 전년동기비(YoY %) — 최근 6개월</p>
+            </div>
+            <InfoPopup {...INFO.inflation} />
           </div>
 
           {/* 범례 */}
