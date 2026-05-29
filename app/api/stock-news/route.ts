@@ -63,6 +63,8 @@ function parsePubDate(s: string): string {
 }
 
 // ── RSS XML 파싱 ─────────────────────────────────────────────
+// Google News RSS의 <description>에 실제 기사 href가 들어있음
+// → news.google.com 리다이렉트 URL 대신 실제 언론사 URL 추출
 function parseRss(xml: string): NewsItem[] {
   const blocks = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
 
@@ -74,11 +76,16 @@ function parseRss(xml: string): NewsItem[] {
     const title = decodeHtml(titleM?.[1] ?? '').trim()
     if (title.length < 5) return []
 
-    // URL: <link> 또는 <guid>
-    const linkM =
-      item.match(/<link>([^<\s]+)<\/link>/) ??
-      item.match(/<guid[^>]*>([^<]+)<\/guid>/)
-    const url = (linkM?.[1] ?? '').trim()
+    // description HTML 안에서 첫 번째 non-Google URL 추출
+    const descM =
+      item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) ??
+      item.match(/<description>([^<]+)<\/description>/)
+    const descHtml = descM?.[1] ?? ''
+    const actualM  = descHtml.match(/href="(https?:\/\/(?!news\.google\.com)[^"&]+)"/)
+
+    // 폴백: <link> Google 리다이렉트 URL
+    const linkM = item.match(/<link>([^<\s]+)<\/link>/)
+    const url   = (actualM?.[1] ?? linkM?.[1] ?? '').trim()
     if (!url.startsWith('http')) return []
 
     // 언론사: <source>

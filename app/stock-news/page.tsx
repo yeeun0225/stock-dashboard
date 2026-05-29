@@ -110,7 +110,7 @@ function ArticleModal({
                 target="_blank" rel="noopener noreferrer"
                 className="mt-2 inline-block text-blue-400 underline text-xs"
               >
-                네이버에서 직접 열기 →
+                원문 직접 열기 →
               </a>
             </div>
           )}
@@ -137,14 +137,15 @@ function ArticleModal({
                   {article.body}
                 </div>
               ) : (
-                <div className="text-sm text-gray-400 py-4">
-                  <p className="mb-3">본문을 표시하지 못했어요.</p>
+                <div className="bg-gray-800/60 rounded-xl p-4 text-sm text-gray-400">
+                  <p className="mb-1 text-gray-300 font-medium">이 언론사는 본문 추출이 제한돼요.</p>
+                  <p className="text-xs text-gray-500 mb-3">아래 링크로 원문을 확인해주세요.</p>
                   <a
                     href={article.originalUrl}
                     target="_blank" rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                    className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 underline transition-colors text-sm"
                   >
-                    네이버에서 원문 보기 →
+                    원문 보기 ↗
                   </a>
                 </div>
               )}
