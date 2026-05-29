@@ -26,15 +26,14 @@ function SkeletonRow() {
 }
 
 // ── 단일 리서치 행 ────────────────────────────────────────────
-// finance.naver.com은 모바일 UA를 감지하면 m.stock.naver.com 루트로 리다이렉트해
-// nid 파라미터를 잃어버림 → 리포트 홈으로 떨어짐.
-// 모바일에서는 m.stock.naver.com 직접 경로를 사용.
+// finance.naver.com은 모바일 UA를 감지하면 m.stock.naver.com으로 리다이렉트해
+// nid 파라미터를 잃어버리고 리포트 홈으로 떨어짐.
+// 모바일에서는 PDF(pstatic.net CDN, 리다이렉트 없음)를 우선 사용하고,
+// PDF가 없는 경우에만 데스크탑 URL로 폴백.
 function getReportUrl(item: ResearchItem): string {
   if (typeof window === 'undefined') return item.readUrl
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-  if (isMobile) {
-    return `https://m.stock.naver.com/research/company/read?nid=${item.nid}`
-  }
+  if (isMobile && item.pdfUrl) return item.pdfUrl
   return item.readUrl
 }
 
