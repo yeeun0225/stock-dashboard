@@ -103,21 +103,20 @@ function parseArticle(html: string, originalUrl: string): ArticleData {
 
   // 본문 — 여러 사이트 구조 커버
   const bodyPatterns: RegExp[] = [
-    // naver news (n.news.naver.com)
+    // ── 매일경제 mk.co.kr ──
+    /class="[^"]*news_cnt_detail_wrap[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
+    /class="[^"]*art_txt[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
+    // ── naver news (n.news.naver.com) ──
     /id="dic_area"[^>]*>([\s\S]{100,}?)<\/(?:article|div)>/,
-    // schema.org articleBody
+    // ── schema.org articleBody ──
     /itemprop="articleBody"[^>]*>([\s\S]{100,}?)<\/(?:article|div|section)>/i,
-    // 한국경제 / 매일경제 / 조선비즈 공통
+    // ── 한국 뉴스사이트 공통 클래스 ──
     /class="[^"]*article[_\-]?(?:view|body|content|text)[^"]*"[^>]*>([\s\S]{100,}?)<\/(?:div|article|section)>/i,
-    // 연합뉴스
-    /class="[^"]*article[_\-]?wrap[^"]*"[^>]*>([\s\S]{100,}?)<\/(?:div|article)>/i,
-    // 뉴시스, 뉴스1
-    /id="[^"]*(?:articleBody|article_content|news_content|newsContent|articleTxt|articeBody)[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
-    // 이데일리, 아시아경제
     /class="[^"]*(?:view_con|news_view|newsView|view_text)[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
-    // generic <article> tag (가장 넓은 폴백)
+    /id="[^"]*(?:articleBody|article_content|news_content|newsContent)[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
+    // ── generic <article> tag ──
     /<article[^>]*>([\s\S]{100,}?)<\/article>/i,
-    // og:description (마지막 폴백 — 요약 표시)
+    // ── og:description 폴백 (요약) ──
     /property="og:description"\s+content="([^"]{30,})"/,
   ]
 

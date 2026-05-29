@@ -21,17 +21,17 @@ export interface StockNewsData {
   timestamp:  number
 }
 
-// ── Google News RSS 카테고리 & 검색어 ────────────────────────
-const CATEGORY_FEEDS = [
-  { key: 'market',     label: '시황·전망',     query: '코스피 코스닥 증시 시황' },
-  { key: 'stock',      label: '기업·종목분석',  query: '종목분석 주식 매수 목표주가' },
-  { key: 'overseas',   label: '해외증시',      query: '나스닥 뉴욕증시 다우 S&P500' },
-  { key: 'bond',       label: '채권·선물',     query: '채권 국채 선물 기준금리' },
-  { key: 'disclosure', label: '공시·메모',     query: '공시 자사주 유상증자 전환사채' },
-  { key: 'fx',         label: '환율',         query: '환율 원달러 달러 외환' },
+// ── 카테고리 ─────────────────────────────────────────────────
+const CATEGORIES = [
+  { key: 'economy',    label: '경제',     slug: 'economy'    },
+  { key: 'money',      label: '금융',     slug: 'money'      },
+  { key: 'business',   label: '기업',     slug: 'business'   },
+  { key: 'stock',      label: '증권',     slug: 'stock'      },
+  { key: 'realestate', label: '부동산',   slug: 'realestate' },
+  { key: 'it',         label: '테크·과학', slug: 'it'         },
 ]
 
-// ── HTML 엔티티 & 태그 제거 ───────────────────────────────────
+// ── HTML 유틸 ─────────────────────────────────────────────────
 function decodeHtml(s: string): string {
   return s
     .replace(/&amp;/g,  '&')
@@ -44,78 +44,56 @@ function decodeHtml(s: string): string {
     .trim()
 }
 
-// ── pubDate → "N분 전" 형식 ──────────────────────────────────
-function parsePubDate(s: string): string {
-  if (!s) return ''
-  try {
-    const d    = new Date(s)
-    if (isNaN(d.getTime())) return ''
-    const diff = Date.now() - d.getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 60)  return `${mins}분 전`
-    const hrs = Math.floor(mins / 60)
-    if (hrs  < 24)  return `${hrs}시간 전`
-    const days = Math.floor(hrs / 24)
-    return `${days}일 전`
-  } catch {
-    return ''
+// ── mk.co.kr 랭킹 페이지 파싱 ────────────────────────────────
+// <h3 class="news_ttl"> 직전 600자에서 mk.co.kr 뉴스 href 추출
+function parseMkPage(html: string): NewsItem[] {
+  const items: NewsItem[] = []
+  const seen  = new Set<string>()
+
+  const h3Re = /<h3[^>]*class="[^"]*news_ttl[^"]*"[^>]*>([\s\S]*?)<\/h3>/gi
+  let m: RegExpExecArray | null
+
+  while ((m = h3Re.exec(html)) !== null && items.length < 10) {
+    const title = decodeHtml(m[1]).trim()
+    if (title.length < 5) continue
+
+    // 이 h3 앞 600자 슬라이스에서 가장 마지막 mk 뉴스 href 찾기
+    const slice  = html.slice(Math.max(0, m.index - 600), m.index)
+    const hrefs  = [...slice.matchAll(
+      /href="((?:https?:\/\/www\.mk\.co\.kr)?\/news\/[^"#?]+)"/g,
+    )]
+    if (!hrefs.length) continue
+
+    const rawUrl = hrefs[hrefs.length - 1][1]
+    const url    = rawUrl.startsWith('http') ? rawUrl : `https://www.mk.co.kr${rawUrl}`
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    items.push({ title, url, press: '매일경제', time: '' })
   }
+
+  return items
 }
 
-// ── RSS XML 파싱 ─────────────────────────────────────────────
-// Google News RSS의 <description>에 실제 기사 href가 들어있음
-// → news.google.com 리다이렉트 URL 대신 실제 언론사 URL 추출
-function parseRss(xml: string): NewsItem[] {
-  const blocks = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? []
-
-  return blocks.slice(0, 6).flatMap(item => {
-    // 제목 (CDATA or plain)
-    const titleM =
-      item.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) ??
-      item.match(/<title>([^<]+)<\/title>/)
-    const title = decodeHtml(titleM?.[1] ?? '').trim()
-    if (title.length < 5) return []
-
-    // description HTML 안에서 첫 번째 non-Google URL 추출
-    const descM =
-      item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) ??
-      item.match(/<description>([^<]+)<\/description>/)
-    const descHtml = descM?.[1] ?? ''
-    const actualM  = descHtml.match(/href="(https?:\/\/(?!news\.google\.com)[^"&]+)"/)
-
-    // 폴백: <link> Google 리다이렉트 URL
-    const linkM = item.match(/<link>([^<\s]+)<\/link>/)
-    const url   = (actualM?.[1] ?? linkM?.[1] ?? '').trim()
-    if (!url.startsWith('http')) return []
-
-    // 언론사: <source>
-    const pressM = item.match(/<source[^>]*>([^<]+)<\/source>/)
-    const press  = decodeHtml(pressM?.[1] ?? '').trim()
-
-    // 날짜
-    const dateM = item.match(/<pubDate>([^<]+)<\/pubDate>/)
-    const time  = parsePubDate(dateM?.[1] ?? '')
-
-    return [{ title, url, press, time }]
-  })
-}
-
-// ── RSS fetch ─────────────────────────────────────────────────
-async function fetchFeed(query: string): Promise<NewsItem[]> {
+// ── 카테고리 fetch ────────────────────────────────────────────
+async function fetchCategory(slug: string): Promise<NewsItem[]> {
   try {
-    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`
-    const res = await fetch(rssUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        Accept: 'application/rss+xml, application/xml, text/xml, */*',
-        'Accept-Language': 'ko-KR,ko;q=0.9',
+    const res = await fetch(
+      `https://www.mk.co.kr/news/ranking/${slug}`,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          Accept:          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          Referer:         'https://www.mk.co.kr/',
+        },
+        next: { revalidate: 300 },
       },
-      next: { revalidate: 300 },
-    })
+    )
     if (!res.ok) return []
-    const xml = await res.text()
-    return parseRss(xml)
+    const html = await res.text()
+    return parseMkPage(html)
   } catch {
     return []
   }
@@ -124,10 +102,10 @@ async function fetchFeed(query: string): Promise<NewsItem[]> {
 // ── GET ───────────────────────────────────────────────────────
 export async function GET() {
   const results = await Promise.allSettled(
-    CATEGORY_FEEDS.map(async cat => ({
+    CATEGORIES.map(async cat => ({
       key:   cat.key,
       label: cat.label,
-      items: await fetchFeed(cat.query),
+      items: await fetchCategory(cat.slug),
     })),
   )
 
