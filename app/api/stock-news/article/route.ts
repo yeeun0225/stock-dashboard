@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// ── HTML 유틸 ─────────────────────────────────────────────────
 function decodeHtml(s: string): string {
   return s
     .replace(/&amp;/g,  '&')
@@ -26,7 +25,6 @@ function stripTags(s: string): string {
     .trim()
 }
 
-// ── 기사 fetch ────────────────────────────────────────────────
 async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string } | null> {
   try {
     const res = await fetch(url, {
@@ -35,7 +33,7 @@ async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string 
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         Accept:          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ko-KR,ko;q=0.9',
-        Referer:         'https://finance.naver.com/news/',
+        Referer:         'https://news.google.com/',
       },
       redirect: 'follow',
       cache:    'no-store',
@@ -43,17 +41,23 @@ async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string 
     if (!res.ok) return null
     const finalUrl = res.url
     const buf      = await res.arrayBuffer()
-    const html     = (() => {
-      try      { return new TextDecoder('euc-kr').decode(buf) }
-      catch    { return new TextDecoder('utf-8', { fatal: false }).decode(buf) }
-    })()
+    // UTF-8 우선 (대부분의 뉴스사이트), EUC-KR 폴백
+    let html = ''
+    try {
+      html = new TextDecoder('utf-8').decode(buf)
+      // 인코딩 오류가 많으면 EUC-KR 재시도
+      if ((html.match(/�/g) ?? []).length > 10) {
+        html = new TextDecoder('euc-kr').decode(buf)
+      }
+    } catch {
+      html = new TextDecoder('utf-8', { fatal: false }).decode(buf)
+    }
     return { html, finalUrl }
   } catch {
     return null
   }
 }
 
-// ── 기사 파싱 ─────────────────────────────────────────────────
 interface ArticleData {
   title:       string
   press:       string
@@ -63,50 +67,55 @@ interface ArticleData {
 }
 
 function parseArticle(html: string, originalUrl: string): ArticleData {
-  // ── 제목 ──────────────────────────────────────────────────
-  const rawTitle  = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? ''
-  const title     = decodeHtml(
-    rawTitle.split('|')[0]?.split('::')[0]?.split(' - ')[0]?.trim() ?? rawTitle,
+  // 제목
+  const rawTitle = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? ''
+  const title    = decodeHtml(
+    rawTitle.split('|')[0]?.split('::')[0]?.split(' - ')[0]?.split('< ')[0]?.trim() ?? rawTitle,
   )
 
-  // ── 언론사 ────────────────────────────────────────────────
-  const pressPatterns = [
-    /class="[^"]*media_end_head_top[^"]*"[\s\S]{1,200}?<em[^>]*>([^<]+)<\/em>/,
-    /property="og:site_name"\s+content="([^"]+)"/,
-    /class="[^"]*press[^"]*"[^>]*>([^<]+)</,
-  ]
+  // 언론사
   let press = ''
+  const pressPatterns = [
+    /property="og:site_name"\s+content="([^"]+)"/,
+    /name="twitter:site"\s+content="@?([^"]+)"/,
+    /class="[^"]*(?:media|publisher|source|press)[^"]*"[^>]*>([^<]{2,30})</i,
+  ]
   for (const pat of pressPatterns) {
     const m = html.match(pat)
-    if (m?.[1]) { press = decodeHtml(m[1]); break }
+    if (m?.[1]) { press = decodeHtml(m[1]).trim(); break }
   }
 
-  // ── 날짜 ──────────────────────────────────────────────────
-  const datePatterns = [
-    /class="[^"]*_ARTICLE_DATE_TIME[^"]*"[^>]*data-date-time="([^"]+)"/,
-    /class="[^"]*media_end_head_info_datestamp[^"]*"[\s\S]{1,300}?(\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2})/,
-    /class="[^"]*(?:wdate|date)[^"]*"[^>]*>\s*(\d{4}\.\d{2}\.\d{2}(?:\s+\d{2}:\d{2})?)/,
-    /(\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2})/,
-  ]
+  // 날짜
   let date = ''
+  const datePatterns = [
+    /property="article:published_time"\s+content="([^"]+)"/,
+    /class="[^"]*_ARTICLE_DATE_TIME[^"]*"[^>]*data-date-time="([^"]+)"/,
+    /(\d{4}[.\-]\d{2}[.\-]\d{2}\s+\d{2}:\d{2})/,
+    /(\d{4}[.\-]\d{2}[.\-]\d{2})/,
+  ]
   for (const pat of datePatterns) {
     const m = html.match(pat)
-    if (m?.[1]) { date = m[1].trim(); break }
+    if (m?.[1]) {
+      date = m[1].replace('T', ' ').replace(/\+.*$/, '').trim()
+      break
+    }
   }
 
-  // ── 본문 ──────────────────────────────────────────────────
+  // 본문 — 여러 사이트 구조 커버
   const bodyPatterns: RegExp[] = [
-    // n.news.naver.com
+    // naver news (n.news.naver.com)
     /id="dic_area"[^>]*>([\s\S]{100,}?)<\/(?:article|div)>/,
-    // finance.naver.com 인라인 기사
-    /class="[^"]*articleCont[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/,
-    // 구형 naver
-    /id="articleBodyContents"[^>]*>([\s\S]{100,}?)<\/div>/,
-    // 기타 article body
-    /class="[^"]*(?:article|news)[_-]body[_-]?(?:cont(?:ent)?)?[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
+    // schema.org articleBody
+    /itemprop="articleBody"[^>]*>([\s\S]{100,}?)<\/(?:article|div|section)>/i,
+    // 한국 뉴스사이트 공통
+    /class="[^"]*article[_\-]?(?:view|body|content|text)[^"]*"[^>]*>([\s\S]{100,}?)<\/(?:div|article|section)>/i,
+    /id="[^"]*(?:articleBody|article_content|news_content|newsContent)[^"]*"[^>]*>([\s\S]{100,}?)<\/div>/i,
+    // generic <article> tag
+    /<article[^>]*>([\s\S]{100,}?)<\/article>/i,
     // og:description 폴백
     /property="og:description"\s+content="([^"]{30,})"/,
   ]
+
   let body = ''
   for (const pat of bodyPatterns) {
     const m = html.match(pat)
@@ -124,27 +133,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const rawUrl = searchParams.get('url') ?? ''
 
-  if (!rawUrl || !rawUrl.includes('naver.com')) {
+  // 기본 URL 검증
+  if (!rawUrl || !rawUrl.startsWith('http')) {
     return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
   }
 
-  // finance.naver.com URL → article_id + office_id 추출
-  // → n.news.naver.com/article/{office_id}/{article_id} 직접 시도
-  const articleIdM = rawUrl.match(/[?&]article_id=(\d+)/)
-  const officeIdM  = rawUrl.match(/[?&]office_id=(\d+)/)
-  const nNewsUrl   =
-    articleIdM && officeIdM
-      ? `https://n.news.naver.com/article/${officeIdM[1]}/${articleIdM[1]}`
-      : null
-
-  let result = nNewsUrl ? await fetchHtml(nNewsUrl) : null
-  if (!result) result = await fetchHtml(rawUrl)  // 폴백
-
+  // Google News 리다이렉트 URL → 실제 기사 URL로 follow
+  const result = await fetchHtml(rawUrl)
   if (!result) {
     return NextResponse.json({ error: 'Fetch failed' }, { status: 502 })
   }
 
-  const article = parseArticle(result.html, rawUrl)
+  const article = parseArticle(result.html, result.finalUrl)
 
   return NextResponse.json(article, {
     headers: { 'Cache-Control': 'no-store' },
