@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
+// 24시간 캐시 — 매일 오전 cron이 revalidatePath로 갱신
+export const revalidate = 86400
 
 export interface ResearchItem {
   stockCode: string
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
         'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
         Referer: 'https://finance.naver.com/research/',
       },
-      cache: 'no-store',
+      next: { revalidate: 86400 },
     })
 
     if (!res.ok) {
