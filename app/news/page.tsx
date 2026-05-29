@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, type MouseEvent } from 'react'
 import type { ResearchData, ResearchItem } from '@/app/api/research/route'
 
 const AFTER_DATE = '2026-01-01'
@@ -26,7 +26,24 @@ function SkeletonRow() {
 }
 
 // ── 단일 리서치 행 ────────────────────────────────────────────
+// finance.naver.com은 모바일 UA를 감지하면 m.stock.naver.com 루트로 리다이렉트해
+// nid 파라미터를 잃어버림 → 리포트 홈으로 떨어짐.
+// 모바일에서는 m.stock.naver.com 직접 경로를 사용.
+function getReportUrl(item: ResearchItem): string {
+  if (typeof window === 'undefined') return item.readUrl
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  if (isMobile) {
+    return `https://m.stock.naver.com/research/company/read?nid=${item.nid}`
+  }
+  return item.readUrl
+}
+
 function ResearchRow({ item }: { item: ResearchItem }) {
+  const handleTitleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    window.open(getReportUrl(item), '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <tr className="border-b border-gray-800/40 hover:bg-gray-800/30 transition-colors group">
       {/* 종목 */}
@@ -45,6 +62,7 @@ function ResearchRow({ item }: { item: ResearchItem }) {
         <div className="flex items-start gap-2">
           <a
             href={item.readUrl}
+            onClick={handleTitleClick}
             target="_blank" rel="noopener noreferrer"
             className="text-gray-200 hover:text-white text-sm leading-snug transition-colors"
           >
