@@ -45,62 +45,41 @@ function decodeHtml(s: string): string {
 }
 
 // ── 뉴스 파싱 ─────────────────────────────────────────────────
+// finance.naver.com/news/newslist.naver 페이지에서
+// newsRead.naver href를 가진 모든 <a>를 수집 → 주변 컨텍스트로 press/time 추출
 function parseNewsItems(html: string): NewsItem[] {
   const items: NewsItem[] = []
+  const seen  = new Set<string>()
 
-  // ── 패턴 1: <li class="blockX"> 구조 ───────────────────────
-  const liRe = /<li[^>]*class="[^"]*block\d+[^"]*"[^>]*>([\s\S]*?)<\/li>/gi
+  // finance.naver.com 뉴스 링크 패턴 (절대 경로 or 상대 경로 모두)
+  const linkRe =
+    /href="((?:https?:\/\/finance\.naver\.com)?\/news\/newsRead\.naver\?[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi
   let m: RegExpExecArray | null
-  while ((m = liRe.exec(html)) !== null && items.length < 6) {
-    const block = m[1]
 
-    // 제목 & URL: newsRead.naver 링크
-    const linkM = block.match(
-      /href="(\/news\/newsRead\.naver\?[^"]+)"[^>]*>\s*([\s\S]{5,200}?)\s*<\/a>/,
-    )
-    if (!linkM) continue
+  while ((m = linkRe.exec(html)) !== null && items.length < 6) {
+    const rawHref = m[1]
+    const url     = rawHref.startsWith('http')
+      ? rawHref
+      : `https://finance.naver.com${rawHref}`
 
-    const url   = `https://finance.naver.com${linkM[1]}`
-    const title = decodeHtml(linkM[2])
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    // 제목 (중첩 태그 제거)
+    const title = decodeHtml(m[2]).trim()
     if (title.length < 5) continue
 
-    // 언론사
-    const pressM = block.match(/class="[^"]*press[^"]*"[^>]*>([\s\S]*?)<\//)
+    // 링크 직후 400자 컨텍스트에서 press / time 추출
+    const ctxStart = m.index + m[0].length
+    const ctx      = html.slice(ctxStart, ctxStart + 400)
+
+    const pressM = ctx.match(/class="[^"]*press[^"]*"[^>]*>([\s\S]*?)<\//)
     const press  = pressM ? decodeHtml(pressM[1]) : ''
 
-    // 시간
-    const timeM = block.match(/class="[^"]*(?:wdate|date)[^"]*"[^>]*>([\s\S]*?)<\//)
-    const time  = timeM ? decodeHtml(timeM[1]) : ''
+    const timeM  = ctx.match(/class="[^"]*(?:wdate|date)[^"]*"[^>]*>([\s\S]*?)<\//)
+    const time   = timeM  ? decodeHtml(timeM[1])  : ''
 
     items.push({ title, url, press, time })
-  }
-
-  // ── 패턴 2: <dl> 구조 (폴백) ───────────────────────────────
-  if (items.length === 0) {
-    const dlRe = /<dl[^>]*>([\s\S]*?)<\/dl>/gi
-    while ((m = dlRe.exec(html)) !== null && items.length < 6) {
-      const block = m[1]
-
-      const linkM = block.match(
-        /href="([^"]*newsRead[^"]*)"[^>]*>([\s\S]{5,200}?)<\/a>/,
-      )
-      if (!linkM) continue
-
-      const rawUrl = linkM[1]
-      const url    = rawUrl.startsWith('http')
-        ? rawUrl
-        : `https://finance.naver.com${rawUrl}`
-      const title = decodeHtml(linkM[2])
-      if (title.length < 5) continue
-
-      const pressM = block.match(/class="[^"]*press[^"]*"[^>]*>([\s\S]*?)<\//)
-      const press  = pressM ? decodeHtml(pressM[1]) : ''
-
-      const timeM = block.match(/(\d{4}\.\d{2}\.\d{2})/)
-      const time  = timeM?.[1] ?? ''
-
-      items.push({ title, url, press, time })
-    }
   }
 
   return items
