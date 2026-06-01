@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { fredDesc } from '@/lib/fred'
 
-export const dynamic    = 'force-dynamic'
-export const fetchCache = 'default-no-store'
+export const revalidate = 1800   // 30분 ISR
 
 export interface HealthPoint { date: string; value: number }
 
