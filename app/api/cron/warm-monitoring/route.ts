@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     } catch {
       failed++
     }
-    await sleep(400)   // 400ms 간격 = 2.5 req/sec < FRED 한도(2/sec on avg)
+    await sleep(600)   // 600ms 간격 = 1.67 req/sec — FRED 한도(120/분=2/sec) 안전 마진 확보
   }
 
   return NextResponse.json({
