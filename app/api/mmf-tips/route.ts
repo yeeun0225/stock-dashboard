@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { fredDesc } from '@/lib/fred'
 
-export const dynamic = 'force-dynamic'
+export const dynamic    = 'force-dynamic'
+export const fetchCache = 'default-no-store'
 
 export interface MmfPoint  { date: string; value: number }
 export interface TipsPoint { label: string; value: number; change: number; date: string }

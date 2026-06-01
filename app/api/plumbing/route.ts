@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
 import { fredDesc } from '@/lib/fred'
 
-export const dynamic = 'force-dynamic'
+export const dynamic    = 'force-dynamic'
+export const fetchCache = 'default-no-store'
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
 interface FredPoint { value: number; prev: number; change: number; date: string }

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { fredDesc } from '@/lib/fred'
 
-export const dynamic = 'force-dynamic'
+export const dynamic    = 'force-dynamic'
+export const fetchCache = 'default-no-store'
 
 export interface GDPNowData {
   current:   number | null   // % annualized (SAAR)

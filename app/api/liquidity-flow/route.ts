@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { fredDesc } from '@/lib/fred'
 
-export const dynamic = 'force-dynamic'
+export const dynamic    = 'force-dynamic'
+export const fetchCache = 'default-no-store'  // force-dynamic의 force-no-store를 override → next.revalidate 허용
 
 export interface LiqFlowPoint { date: string; value: number }
 

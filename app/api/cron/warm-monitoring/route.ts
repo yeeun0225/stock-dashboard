@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { fredDesc }    from '@/lib/fred'
 
 export const dynamic    = 'force-dynamic'
+export const fetchCache = 'default-no-store'  // next.revalidate=86400 가 살아있어야 Data Cache에 저장됨
 export const maxDuration = 60   // Vercel 함수 최대 실행 시간 (초)
 
 /**
