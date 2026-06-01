@@ -332,12 +332,22 @@ export default function RealEconomyPage() {
       ])
     }
 
-    loadAll()
-    // FRED cold-start retry: if FRED was rate-limited on first request,
-    // the Data Cache will be warm 2s later so retries succeed without hitting FRED again
-    const retryId = setTimeout(loadAll, 2000)
+    // ── FRED 콜드스타트 재시도 전략 ────────────────────────
+    // employment-domino(5 시리즈) + consumer-health(4 시리즈) = 900ms 안에 9개 FRED 호출
+    // 뒤쪽 호출이 rate limit에 걸리면 current=null 로 부분 데이터가 돌아옴.
+    // t=2s: 첫 번째 재시도 — 캐시된 시리즈는 즉시, 미캐시는 FRED 재시도
+    // t=5s: 두 번째 재시도 — rate limit 완전 해소 + 1차 재시도분까지 캐시 완비
+    const safeJson = (r: Response) => r.ok ? r.json() : null
+    const retryDomCon = async () => {
+      await Promise.allSettled([
+        fetch('/api/employment-domino').then(safeJson).then(d => d && setDomino(d)).finally(() => setDomLoading(false)),
+        fetch('/api/consumer-health').then(safeJson).then(d => d && setConsumer(d)).finally(() => setConLoading(false)),
+      ])
+    }
+    const retryId  = setTimeout(loadAll, 2000)
+    const retryId2 = setTimeout(retryDomCon, 5000)
     const id = setInterval(loadAll, 5 * 60 * 1000)
-    return () => { clearTimeout(retryId); clearInterval(id) }
+    return () => { clearTimeout(retryId); clearTimeout(retryId2); clearInterval(id) }
   }, [])
 
   const stageLabels: Record<string, string> = {
