@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
-
-const FRED_KEY = process.env.FRED_API_KEY
-const BASE     = 'https://api.stlouisfed.org/fred/series/observations'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fredDesc(series: string, limit: number): Promise<any[]> {
-  const url = `${BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res  = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data.observations as any[]).filter(o => o.value !== '.')
-}
 
 export interface MmfPoint  { date: string; value: number }
 export interface TipsPoint { label: string; value: number; change: number; date: string }
@@ -31,11 +20,16 @@ export interface MmfTipsData {
 
 export async function GET() {
   try {
-    const [mmfObs, t5Obs, t10Obs] = await Promise.all([
-      fredDesc('WRMFNS', 14),    // MMF 총 자산 (주간, 십억$)
-      fredDesc('DFII5',   5),    // 5Y TIPS 실질금리 (일간, %)
-      fredDesc('DFII10',  5),    // 10Y TIPS 실질금리 (일간, %)
+    // 전역 FRED 요청 타임테이블 기준: 이 라우트는 t=50ms, t=250ms, t=450ms
+    const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+    const [mmfRes, t5Res, t10Res] = await Promise.allSettled([
+      d(50).then(()  => fredDesc('WRMFNS', 14)),
+      d(250).then(() => fredDesc('DFII5',  5)),
+      d(450).then(() => fredDesc('DFII10', 5)),
     ])
+    const mmfObs = mmfRes.status === 'fulfilled' ? mmfRes.value : []
+    const t5Obs  = t5Res.status  === 'fulfilled' ? t5Res.value  : []
+    const t10Obs = t10Res.status === 'fulfilled' ? t10Res.value : []
 
     // ── MMF ──────────────────────────────────────────────
     let mmf: MmfTipsData['mmf'] = null

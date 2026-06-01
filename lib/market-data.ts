@@ -117,28 +117,51 @@ export async function fetchMarketData(): Promise<MarketData | null> {
   }
 }
 
+/**
+ * 공포탐욕지수 — Yahoo Finance 실시간 데이터로 직접 계산
+ *
+ * 구성 지표 (CNN과 동일한 방향성):
+ *   - VIX 변동성 (55%) : VIX 낮을수록 탐욕, 높을수록 공포
+ *   - SPY vs 200일 SMA (45%) : 이격도가 클수록 탐욕, 음수면 공포
+ *
+ * 점수 구간: 0-24 Extreme Fear · 25-44 Fear · 45-54 Neutral
+ *            55-74 Greed · 75-100 Extreme Greed
+ */
 export async function fetchFearGreedData(): Promise<FearGreedData | null> {
   try {
-    const res = await fetch(
-      'https://production.dataviz.cnn.io/index/fearandgreed/graphdata/',
-      {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          Referer: 'https://edition.cnn.com/',
-          Accept:  'application/json',
-        },
-      }
-    )
-    const json = await res.json()
-    const fg = json?.fear_and_greed
-    return {
-      value:          Math.round(Number(fg?.score ?? 50)),
-      classification: fg?.rating ?? 'Neutral',
-      timestamp:      Date.now(),
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const quotes = await yf.quote(['^VIX', 'SPY'], {}, { validateResult: false }) as any[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vixQ = quotes.find((q: any) => q?.symbol === '^VIX')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const spyQ = quotes.find((q: any) => q?.symbol === 'SPY')
+
+    const vix      = Number(vixQ?.regularMarketPrice)
+    const spyPrice = Number(spyQ?.regularMarketPrice)
+    const sma200   = Number(spyQ?.twoHundredDayAverage)
+
+    if (!vix || !spyPrice || !sma200) return null
+
+    // VIX 점수: VIX 12→90, VIX 20→60, VIX 30→25, VIX 38→0
+    const vixScore = Math.max(0, Math.min(100, 132 - vix * 3.5))
+
+    // SPY 모멘텀 점수: 200일 SMA 대비 이격도 ±10% → 점수 ±30p
+    const momentumPct   = (spyPrice / sma200 - 1) * 100
+    const momentumScore = Math.max(0, Math.min(100, 50 + momentumPct * 3))
+
+    // 가중 합산 (VIX 55% + 모멘텀 45%)
+    const value = Math.round(vixScore * 0.55 + momentumScore * 0.45)
+
+    const classification =
+      value >= 75 ? 'Extreme Greed' :
+      value >= 55 ? 'Greed'         :
+      value >= 45 ? 'Neutral'       :
+      value >= 25 ? 'Fear'          :
+                    'Extreme Fear'
+
+    return { value, classification, timestamp: Date.now() }
   } catch (err) {
     console.error('[fetchFearGreedData]', err)
-    return { value: 50, classification: 'Neutral', timestamp: Date.now() }
+    return null
   }
 }

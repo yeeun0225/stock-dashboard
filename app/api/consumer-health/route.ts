@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
-
-const FRED_KEY = process.env.FRED_API_KEY
-const BASE     = 'https://api.stlouisfed.org/fred/series/observations'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fredDesc(series: string, limit: number): Promise<any[]> {
-  const url = `${BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res  = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((data.observations ?? []) as any[]).filter(o => o.value !== '.')
-}
 
 export interface HealthPoint { date: string; value: number }
 
@@ -72,11 +61,13 @@ function retailStatus(yoy: number | null): 'green' | 'yellow' | 'red' | 'unknown
 
 export async function GET() {
   try {
+    // 전역 FRED 요청 타임테이블 기준: 이 라우트는 t=150ms~750ms
+    const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     const [sentRes, savRes, delRes, retailRes] = await Promise.allSettled([
-      fredDesc('UMCSENT',   14),   // U-Mich Consumer Sentiment (monthly, index)
-      fredDesc('PSAVERT',   14),   // Personal Saving Rate (monthly, %)
-      fredDesc('DRCCLACBS', 10),   // Credit Card Delinquency Rate (quarterly, %)
-      fredDesc('RSXFS',     15),   // Retail Sales ex-food services (monthly, millions $)
+      d(150).then(() => fredDesc('UMCSENT',   14)),
+      d(350).then(() => fredDesc('PSAVERT',   14)),
+      d(550).then(() => fredDesc('DRCCLACBS', 10)),
+      d(750).then(() => fredDesc('RSXFS',     15)),
     ])
 
     const sentObs   = sentRes.status   === 'fulfilled' ? sentRes.value   : []

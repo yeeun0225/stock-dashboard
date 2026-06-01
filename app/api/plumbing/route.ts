@@ -1,34 +1,20 @@
 import { NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
-const FRED_KEY  = process.env.FRED_API_KEY
-const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations'
-
-// FRED에서 최신 2개 관측치 가져오기
-async function fredFetch(series: string, limit = 10) {
-  const url = `${FRED_BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res = await fetch(url, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`FRED ${series} ${res.status}`)
-  const data = await res.json()
-  // '.' 은 결측값
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data.observations as any[]).filter(o => o.value !== '.')
-}
-
 interface FredPoint { value: number; prev: number; change: number; date: string }
 
-async function fredPoint(series: string): Promise<FredPoint | null> {
-  try {
-    const obs = await fredFetch(series, 10)
-    if (obs.length < 2) return null
-    const value = parseFloat(obs[0].value)
-    const prev  = parseFloat(obs[1].value)
-    return { value, prev, change: value - prev, date: obs[0].date }
-  } catch { return null }
+async function toPoint(obs: Awaited<ReturnType<typeof fredDesc>>): Promise<FredPoint | null> {
+  if (obs.length < 2) return null
+  const value = parseFloat(obs[0].value)
+  const prev  = parseFloat(obs[1].value)
+  return { value, prev, change: value - prev, date: obs[0].date }
 }
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -47,7 +33,7 @@ export interface PlumbingPanel {
   fsi:           FredPoint | null   // STLFSI4 — 금융스트레스 지수
 
   // Panel 4: 신용·실물 리스크
-  hySpread:      FredPoint | null   // BAMLH0A3HYCSOAS (%)
+  hySpread:      FredPoint | null   // BAMLH0A0HYM2 (%)
   loanStandards: FredPoint | null   // DRSDCILM — 대출 기준 강화 net%
 
   timestamp: number
@@ -55,16 +41,30 @@ export interface PlumbingPanel {
 
 export async function GET() {
   try {
-    // FRED 병렬 요청
+    // ── FRED 직렬 요청 (글로벌 타임테이블 준수) ─────────────────────────────
+    // limit=65 for RRPONTSYD/SOFR → 워밍크론(limit=65) + liquidity-flow와 캐시키 공유
+    // BAMLH0A0HYM2: 구 BAMLH0A3HYCSOAS의 대체 시리즈 (US HY 스프레드)
+    // 각 시리즈에 delay를 줘서 cold-cache 상황에서도 FRED 속도제한 준수
+    const [faObs, onrrpObs, sofrObs, iorbObs, fsiObs, hyObs, loanObs] =
+      await Promise.all([
+        fredDesc('WALCL',          10).catch(() => null),                   // t ≈ 0ms
+        fredDesc('RRPONTSYD',      65).catch(() => null),                   // t ≈ 0ms  — 캐시공유: 워밍크론·liquidity-flow
+        fredDesc('SOFR',           65).catch(() => null),                   // t ≈ 0ms  — 캐시공유: 워밍크론·liquidity-flow
+        sleep(200).then(() => fredDesc('IORB',          10)).catch(() => null), // t = 200ms
+        sleep(400).then(() => fredDesc('STLFSI4',       10)).catch(() => null), // t = 400ms
+        sleep(600).then(() => fredDesc('BAMLH0A0HYM2',  10)).catch(() => null), // t = 600ms  — 워밍크론에도 추가됨
+        sleep(800).then(() => fredDesc('DRSDCILM',       10)).catch(() => null), // t = 800ms
+      ])
+
     const [fedAssets, onrrp, sofr, iorb, fsi, hySpread, loanStandards] =
       await Promise.all([
-        fredPoint('WALCL'),           // Fed 자산 (백만 $)
-        fredPoint('RRPONTSYD'),       // ON RRP (십억 $)
-        fredPoint('SOFR'),            // SOFR %
-        fredPoint('IORB'),            // IORB %
-        fredPoint('STLFSI4'),         // 금융스트레스
-        fredPoint('BAMLH0A3HYCSOAS'), // HY 스프레드
-        fredPoint('DRSDCILM'),        // 대출기준 강화
+        faObs   ? toPoint(faObs)   : Promise.resolve(null),
+        onrrpObs? toPoint(onrrpObs): Promise.resolve(null),
+        sofrObs ? toPoint(sofrObs) : Promise.resolve(null),
+        iorbObs ? toPoint(iorbObs) : Promise.resolve(null),
+        fsiObs  ? toPoint(fsiObs)  : Promise.resolve(null),
+        hyObs   ? toPoint(hyObs)   : Promise.resolve(null),
+        loanObs ? toPoint(loanObs) : Promise.resolve(null),
       ])
 
     // Yahoo Finance — DXY, USD/JPY

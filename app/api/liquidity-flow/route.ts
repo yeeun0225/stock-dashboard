@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
-
-const FRED_KEY = process.env.FRED_API_KEY
-const BASE     = 'https://api.stlouisfed.org/fred/series/observations'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fredDesc(series: string, limit: number): Promise<any[]> {
-  const url = `${BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res  = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((data.observations ?? []) as any[]).filter(o => o.value !== '.')
-}
 
 export interface LiqFlowPoint { date: string; value: number }
 
@@ -31,10 +20,11 @@ export interface LiquidityFlowData {
 
 export async function GET() {
   try {
-    // Promise.allSettled — 한 쪽 실패 시 나머지는 정상 반환
+    // 전역 FRED 요청 타임테이블 기준: 이 라우트는 t=0ms, t=200ms
+    const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     const [rrpRes, sofrRes] = await Promise.allSettled([
-      fredDesc('RRPONTSYD', 65),   // ON Reverse Repo (daily, billions)
-      fredDesc('SOFR',      65),   // SOFR rate (daily, %)
+      fredDesc('RRPONTSYD', 65),
+      d(200).then(() => fredDesc('SOFR', 65)),
     ])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

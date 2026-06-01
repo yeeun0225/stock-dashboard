@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
-
-const FRED_KEY = process.env.FRED_API_KEY
-const BASE     = 'https://api.stlouisfed.org/fred/series/observations'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fredDesc(series: string, limit: number): Promise<any[]> {
-  const url = `${BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res  = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((data.observations ?? []) as any[]).filter(o => o.value !== '.')
-}
 
 // obs는 desc 정렬 — obs[0]=최신, obs[12]=12개월 전
 function computeYoY(
@@ -59,8 +48,11 @@ const SERIES = [
 export async function GET() {
   try {
     // 25건 = 6개월 YoY(최소 18건) + '.' 필터링 후 버퍼
+    // 전역 FRED 요청 타임테이블 기준: 이 라우트는 t=200ms~1200ms
+    const DELAYS = [200, 400, 600, 800, 1000, 1200]
+    const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     const allObs = await Promise.allSettled(
-      SERIES.map(({ series }) => fredDesc(series, 25))
+      SERIES.map(({ series }, i) => d(DELAYS[i]).then(() => fredDesc(series, 25)))
     )
 
     const rows: InflationRow[] = SERIES.map(({ id, label, emoji }, i) => {

@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server'
+import { fredDesc } from '@/lib/fred'
 
 export const dynamic = 'force-dynamic'
-
-const FRED_KEY = process.env.FRED_API_KEY
-const BASE     = 'https://api.stlouisfed.org/fred/series/observations'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fredDesc(series: string, limit: number): Promise<any[]> {
-  const url = `${BASE}?series_id=${series}&api_key=${FRED_KEY}&sort_order=desc&limit=${limit}&file_type=json`
-  const res  = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((data.observations ?? []) as any[]).filter(o => o.value !== '.')
-}
 
 export interface DominoPoint { date: string; value: number }
 
@@ -101,12 +90,14 @@ function sahmStatus(cur: number | null): 'green' | 'yellow' | 'red' | 'unknown' 
 
 export async function GET() {
   try {
+    // 전역 FRED 요청 타임테이블 기준: 이 라우트는 t=100ms~900ms
+    const d = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     const [joltsRes, tempRes, icsaRes, payemsRes, sahmRes] = await Promise.allSettled([
-      fredDesc('JTSJOL',       15),   // JOLTS total openings (monthly, thousands SA)
-      fredDesc('TEMPHELPS',    15),   // Temporary help services (monthly, thousands SA)
-      fredDesc('ICSA',         14),   // Initial jobless claims (weekly, thousands SA)
-      fredDesc('PAYEMS',       15),   // Nonfarm payrolls level (monthly, thousands SA)
-      fredDesc('SAHMREALTIME', 14),   // Sahm rule real-time (monthly, %p)
+      d(100).then(() => fredDesc('JTSJOL',       15)),
+      d(300).then(() => fredDesc('TEMPHELPS',    15)),
+      d(500).then(() => fredDesc('ICSA',         14)),
+      d(700).then(() => fredDesc('PAYEMS',       15)),
+      d(900).then(() => fredDesc('SAHMREALTIME', 14)),
     ])
 
     const jolts  = joltsRes.status  === 'fulfilled' ? joltsRes.value  : []
