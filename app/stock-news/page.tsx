@@ -15,7 +15,7 @@ interface ArticleData {
 // ── 카테고리 아이콘 ───────────────────────────────────────────
 const ICONS: Record<string, string> = {
   '경제':     '📊',
-  '금융':     '🏦',
+  '글로벌':   '🌐',
   '기업':     '🏢',
   '증권':     '📈',
   '부동산':   '🏘️',
@@ -192,6 +192,11 @@ function NewsCard({
               <p className="text-sm font-semibold text-gray-100 leading-snug line-clamp-2 group-hover:text-white transition-colors">
                 {top.title}
               </p>
+              {top.summary && (
+                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed line-clamp-3">
+                  {top.summary}
+                </p>
+              )}
               <p className="text-[11px] text-gray-500 mt-1.5">
                 {top.press}
                 {top.time && <span className="ml-1.5 text-gray-600">{top.time}</span>}
@@ -294,7 +299,7 @@ export default function StockNewsPage() {
             <span className="text-xl">📰</span>
             <h1 className="text-lg font-bold">경제 뉴스</h1>
             <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">
-              네이버 금융
+              매일경제
             </span>
           </div>
           <div className="flex items-center gap-2">
