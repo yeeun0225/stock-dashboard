@@ -919,10 +919,16 @@ export default function MacroPage() {
 
   useEffect(() => {
     load(); loadPlumbing(); loadCapital(); loadSectors(); loadLeverage()
+    // FRED cold-start retry: plumbing is the only FRED route here;
+    // retry without resetting loading state so there's no flicker
+    const retryId = setTimeout(async () => {
+      try { const r = await fetch('/api/plumbing'); if (r.ok) setPlumbing(await r.json()) } catch {}
+      finally { setPLoading(false) }
+    }, 2000)
     const id = setInterval(() => {
       load(); loadPlumbing(); loadCapital(); loadSectors(); loadLeverage()
     }, 5 * 60 * 1000)
-    return () => clearInterval(id)
+    return () => { clearTimeout(retryId); clearInterval(id) }
   }, [])
 
   if (loading) return (

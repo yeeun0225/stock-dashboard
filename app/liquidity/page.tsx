@@ -378,9 +378,20 @@ export default function LiquidityPage() {
       ])
     }
 
+    // FRED cold-start retry: re-fetch only FRED APIs (no loading flicker for already-loaded data)
+    const retryFred = async () => {
+      const safeJson2 = (r: Response) => r.ok ? r.json() : null
+      await Promise.allSettled([
+        fetch('/api/mmf-tips').then(safeJson2).then(d => d && setMmfTips(d)).finally(() => setMmfLoading(false)),
+        fetch('/api/liquidity-flow').then(safeJson2).then(d => d && setLiqFlow(d)).finally(() => setFlowLoading(false)),
+        fetch('/api/inflation').then(safeJson2).then(d => d && setInflation(d)).finally(() => setInflLoading(false)),
+      ])
+    }
+
     loadAll()
+    const retryId = setTimeout(retryFred, 2000)
     const id = setInterval(loadAll, 5 * 60 * 1000)
-    return () => clearInterval(id)
+    return () => { clearTimeout(retryId); clearInterval(id) }
   }, [])
 
   const timestamp = yields?.timestamp ?? comms?.timestamp ?? Date.now()

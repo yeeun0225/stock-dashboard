@@ -333,8 +333,11 @@ export default function RealEconomyPage() {
     }
 
     loadAll()
+    // FRED cold-start retry: if FRED was rate-limited on first request,
+    // the Data Cache will be warm 2s later so retries succeed without hitting FRED again
+    const retryId = setTimeout(loadAll, 2000)
     const id = setInterval(loadAll, 5 * 60 * 1000)
-    return () => clearInterval(id)
+    return () => { clearTimeout(retryId); clearInterval(id) }
   }, [])
 
   const stageLabels: Record<string, string> = {
