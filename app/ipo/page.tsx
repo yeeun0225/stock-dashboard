@@ -637,7 +637,7 @@ export default function IpoPage() {
           <div className="flex items-center gap-2">
             <span className="text-xl">🏢</span>
             <h1 className="text-lg font-bold">공모주</h1>
-            <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">38커뮤니케이션</span>
+            <span className="text-xs text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">네이버 증권</span>
           </div>
           <div className="flex items-center gap-2">
             {timeLabel && <span className="text-xs text-gray-600">{timeLabel} 기준</span>}
