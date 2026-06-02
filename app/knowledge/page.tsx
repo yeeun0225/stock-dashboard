@@ -745,41 +745,331 @@ function ChartTab() {
           {/* 매수 패턴 */}
           <div>
             <div className="text-center text-sm font-black py-2 px-3 rounded-xl mb-2 text-white bg-gradient-to-br from-green-500 to-green-700">사세요 📈</div>
-            {[
-              { name: '샛별', stars: 5, badge: '매수' },
-              { name: '음의 양포형', stars: 4, badge: '매수' },
-              { name: '스파이크로', stars: 3, badge: '매수' },
-              { name: '더블 바텀', stars: 5, badge: '매수' },
-              { name: '역삼존', stars: 4, badge: '매수' },
-              { name: '소서바텀', stars: 3, badge: '매수' },
-              { name: '삼각법', stars: 3, badge: '매수' },
-              { name: '적삼병', stars: 5, badge: '매수' },
-            ].map(p => (
-              <div key={p.name} className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 mb-1.5 flex items-center justify-between">
-                <span className="text-xs text-gray-300">{p.name}</span>
-                <span className="text-[9px] text-green-400">{'★'.repeat(p.stars)}{'☆'.repeat(5 - p.stars)}</span>
+
+            {/* 1. 샛별 + 핀버 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 58 58" width="46" height="46"><line x1="9" y1="3" x2="9" y2="9" stroke="#ef4444" strokeWidth="2"/><rect x="3" y="9" width="12" height="34" fill="#ef4444" rx="1"/><line x1="9" y1="43" x2="9" y2="50" stroke="#ef4444" strokeWidth="2"/><rect x="22" y="42" width="10" height="8" fill="#ef4444" rx="1"/><line x1="27" y1="38" x2="27" y2="42" stroke="#ef4444" strokeWidth="1.5"/><line x1="27" y1="50" x2="27" y2="55" stroke="#ef4444" strokeWidth="1.5"/><line x1="49" y1="3" x2="49" y2="10" stroke="#22c55e" strokeWidth="2"/><rect x="43" y="10" width="12" height="36" fill="#22c55e" rx="1"/><line x1="49" y1="46" x2="49" y2="53" stroke="#22c55e" strokeWidth="2"/></svg>
+                  <span className="text-[7px] text-gray-500">샛별</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><rect x="4" y="18" width="12" height="12" fill="#22c55e" rx="1"/><line x1="10" y1="30" x2="10" y2="54" stroke="#22c55e" strokeWidth="2.5"/></svg>
+                  <span className="text-[7px] text-gray-500">-핀버</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★★★</span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* 2. 음의 양포형 + 포선 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 40 58" width="32" height="46"><rect x="3" y="22" width="12" height="16" fill="#ef4444" rx="1"/><line x1="9" y1="18" x2="9" y2="22" stroke="#ef4444" strokeWidth="1.5"/><line x1="9" y1="38" x2="9" y2="43" stroke="#ef4444" strokeWidth="1.5"/><rect x="25" y="10" width="12" height="38" fill="#22c55e" rx="1"/><line x1="31" y1="6" x2="31" y2="10" stroke="#22c55e" strokeWidth="1.5"/><line x1="31" y1="48" x2="31" y2="53" stroke="#22c55e" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">음의 양포형</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="5" x2="10" y2="14" stroke="#22c55e" strokeWidth="1.5"/><rect x="4" y="14" width="12" height="18" fill="#22c55e" rx="1"/><line x1="10" y1="32" x2="10" y2="52" stroke="#22c55e" strokeWidth="2.5"/></svg>
+                  <span className="text-[7px] text-gray-500">포선</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★★☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 스파이크로 + 핀버 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 60 58" width="46" height="46"><polyline points="3,10 14,20 22,32 28,46 30,55 32,46 38,32 46,20 57,10" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="30" cy="55" r="3" fill="#22c55e"/></svg>
+                  <span className="text-[7px] text-gray-500">스파이크로</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><rect x="4" y="18" width="12" height="12" fill="#22c55e" rx="1"/><line x1="10" y1="30" x2="10" y2="54" stroke="#22c55e" strokeWidth="2.5"/></svg>
+                  <span className="text-[7px] text-gray-500">-핀버</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. 더블 바텀 + 음선→대양선 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><polyline points="3,10 17,50 35,24 53,50 69,8" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="17" cy="50" r="3" fill="#22c55e"/><circle cx="53" cy="50" r="3" fill="#22c55e"/></svg>
+                  <span className="text-[7px] text-gray-500">더블 바텀</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 38 58" width="28" height="46"><rect x="3" y="22" width="12" height="24" fill="#ef4444" rx="1"/><line x1="9" y1="18" x2="9" y2="22" stroke="#ef4444" strokeWidth="1.5"/><line x1="9" y1="46" x2="9" y2="52" stroke="#ef4444" strokeWidth="1.5"/><rect x="23" y="6" width="12" height="44" fill="#22c55e" rx="1"/><line x1="29" y1="3" x2="29" y2="6" stroke="#22c55e" strokeWidth="1.5"/><line x1="29" y1="50" x2="29" y2="55" stroke="#22c55e" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">음선→대양선</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★★★</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. 역삼존 + 샛별 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 82 58" width="56" height="46"><polyline points="3,14 13,36 24,26 41,55 58,26 69,36 79,14" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><line x1="3" y1="14" x2="79" y2="14" stroke="#22c55e" strokeWidth="1" strokeDasharray="4,3" opacity="0.4"/></svg>
+                  <span className="text-[7px] text-gray-500">역삼존</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 44 58" width="32" height="46"><rect x="2" y="14" width="11" height="26" fill="#ef4444" rx="1"/><rect x="17" y="32" width="9" height="7" fill="#ef4444" rx="1"/><line x1="21" y1="28" x2="21" y2="32" stroke="#ef4444" strokeWidth="1.5"/><rect x="30" y="10" width="11" height="30" fill="#22c55e" rx="1"/><line x1="35" y1="6" x2="35" y2="10" stroke="#22c55e" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">샛별</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★★☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. 소서바텀 + 제비돌려줘 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><path d="M3,10 Q36,58 69,10" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                  <span className="text-[7px] text-gray-500">소서바텀</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="4" x2="10" y2="16" stroke="#22c55e" strokeWidth="1.5"/><rect x="4" y="16" width="12" height="10" fill="#22c55e" rx="1"/><line x1="10" y1="26" x2="10" y2="54" stroke="#22c55e" strokeWidth="2.5"/></svg>
+                  <span className="text-[7px] text-gray-500">제비돌려줘</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 7. 삼각법 + 햇빛진달래선 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><line x1="3" y1="10" x2="70" y2="10" stroke="#22c55e" strokeWidth="1.2" strokeDasharray="4,3" opacity="0.5"/><polyline points="3,52 14,32 27,45 40,22 53,36 66,10" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span className="text-[7px] text-gray-500">삼각법</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="8" stroke="#22c55e" strokeWidth="1.5"/><rect x="4" y="8" width="12" height="48" fill="#22c55e" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">햇빛진달래</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. 도쿄시간 + 적삼병 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 44 58" width="34" height="46"><circle cx="22" cy="27" r="20" fill="none" stroke="#6366f1" strokeWidth="2"/><circle cx="22" cy="27" r="2" fill="#6366f1"/><line x1="22" y1="27" x2="7" y2="27" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round"/><line x1="22" y1="27" x2="22" y2="9" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round"/><text x="22" y="55" textAnchor="middle" fontSize="9" fill="#6366f1" fontWeight="bold">도쿄</text></svg>
+                  <span className="text-[7px] text-gray-500">도쿄 시간</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 56 58" width="42" height="46"><rect x="2" y="32" width="12" height="22" fill="#22c55e" rx="1"/><line x1="8" y1="28" x2="8" y2="32" stroke="#22c55e" strokeWidth="1.5"/><rect x="22" y="18" width="12" height="26" fill="#22c55e" rx="1"/><line x1="28" y1="14" x2="28" y2="18" stroke="#22c55e" strokeWidth="1.5"/><line x1="28" y1="44" x2="28" y2="49" stroke="#22c55e" strokeWidth="1.5"/><rect x="42" y="5" width="12" height="28" fill="#22c55e" rx="1"/><line x1="48" y1="3" x2="48" y2="5" stroke="#22c55e" strokeWidth="1.5"/><line x1="48" y1="33" x2="48" y2="38" stroke="#22c55e" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">적삼병</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-green-500 text-white rounded-full px-1.5 py-0.5">매수</span>
+                  <span className="text-[8px] text-green-400">★★★★★</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 매도 패턴 */}
           <div>
             <div className="text-center text-sm font-black py-2 px-3 rounded-xl mb-2 text-white bg-gradient-to-br from-red-500 to-red-700">팔아요 📉</div>
-            {[
-              { name: '별 + 흑삼병', stars: 5, badge: '매도' },
-              { name: '별똥별', stars: 4, badge: '매도' },
-              { name: '돌부스러기', stars: 3, badge: '매도' },
-              { name: '삼존', stars: 5, badge: '매도' },
-              { name: '하강 렉탱글', stars: 3, badge: '매도' },
-              { name: '하강 플래그', stars: 4, badge: '매도' },
-              { name: '하강 페넌트', stars: 3, badge: '매도' },
-              { name: '런던 시간 + -핀버', stars: 4, badge: '매도' },
-            ].map(p => (
-              <div key={p.name} className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 mb-1.5 flex items-center justify-between">
-                <span className="text-xs text-gray-300">{p.name}</span>
-                <span className="text-[9px] text-red-400">{'★'.repeat(p.stars)}{'☆'.repeat(5 - p.stars)}</span>
+
+            {/* 1. 별 + 흑삼병 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 58 58" width="46" height="46"><line x1="9" y1="3" x2="9" y2="9" stroke="#22c55e" strokeWidth="2"/><rect x="3" y="9" width="12" height="34" fill="#22c55e" rx="1"/><line x1="9" y1="43" x2="9" y2="49" stroke="#22c55e" strokeWidth="2"/><rect x="22" y="4" width="10" height="8" fill="#22c55e" rx="1"/><line x1="27" y1="3" x2="27" y2="4" stroke="#22c55e" strokeWidth="1.5"/><line x1="27" y1="12" x2="27" y2="17" stroke="#22c55e" strokeWidth="1.5"/><line x1="49" y1="5" x2="49" y2="12" stroke="#ef4444" strokeWidth="2"/><rect x="43" y="12" width="12" height="34" fill="#ef4444" rx="1"/><line x1="49" y1="46" x2="49" y2="53" stroke="#ef4444" strokeWidth="2"/></svg>
+                  <span className="text-[7px] text-gray-500">별</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 56 58" width="42" height="46"><rect x="2" y="8" width="12" height="28" fill="#ef4444" rx="1"/><line x1="8" y1="4" x2="8" y2="8" stroke="#ef4444" strokeWidth="1.5"/><line x1="8" y1="36" x2="8" y2="42" stroke="#ef4444" strokeWidth="1.5"/><rect x="22" y="16" width="12" height="30" fill="#ef4444" rx="1"/><line x1="28" y1="12" x2="28" y2="16" stroke="#ef4444" strokeWidth="1.5"/><line x1="28" y1="46" x2="28" y2="52" stroke="#ef4444" strokeWidth="1.5"/><rect x="42" y="26" width="12" height="30" fill="#ef4444" rx="1"/><line x1="48" y1="22" x2="48" y2="26" stroke="#ef4444" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">흑삼병</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★★★</span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* 2. 별똥별 + -핀버 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="32" stroke="#ef4444" strokeWidth="2"/><rect x="4" y="32" width="12" height="12" fill="#ef4444" rx="1"/><line x1="10" y1="44" x2="10" y2="50" stroke="#ef4444" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">별똥별</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="18" stroke="#ef4444" strokeWidth="2"/><rect x="4" y="18" width="12" height="12" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">-핀버</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★★☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 돌부스러기 + 그늘3개 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 55 58" width="42" height="46"><rect x="2" y="14" width="11" height="10" fill="#ef4444" rx="1"/><rect x="16" y="22" width="11" height="10" fill="#ef4444" rx="1"/><rect x="30" y="30" width="11" height="10" fill="#ef4444" rx="1"/><rect x="44" y="38" width="11" height="10" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">돌부스러기</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 55 58" width="42" height="46"><line x1="9" y1="3" x2="9" y2="14" stroke="#ef4444" strokeWidth="1.5"/><rect x="3" y="14" width="12" height="24" fill="#ef4444" rx="1"/><line x1="29" y1="3" x2="29" y2="14" stroke="#ef4444" strokeWidth="1.5"/><rect x="23" y="14" width="12" height="28" fill="#ef4444" rx="1"/><line x1="49" y1="3" x2="49" y2="14" stroke="#ef4444" strokeWidth="1.5"/><rect x="43" y="14" width="12" height="32" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">그늘 3개</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. 삼존 + 3법 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 82 58" width="56" height="46"><polyline points="3,48 13,30 24,40 41,5 58,40 69,30 79,48" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><line x1="3" y1="48" x2="79" y2="48" stroke="#ef4444" strokeWidth="1" strokeDasharray="4,3" opacity="0.4"/></svg>
+                  <span className="text-[7px] text-gray-500">삼존</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 44 58" width="32" height="46"><rect x="2" y="6" width="12" height="46" fill="#ef4444" rx="1"/><line x1="8" y1="3" x2="8" y2="6" stroke="#ef4444" strokeWidth="1.5"/><rect x="18" y="22" width="8" height="8" fill="#22c55e" rx="1"/><rect x="27" y="18" width="8" height="8" fill="#22c55e" rx="1"/><rect x="34" y="8" width="10" height="44" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">3법</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★★★</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. 하강 렉탱글 + 슬러스트다운 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><polyline points="3,8 13,16 20,24 28,22 36,32 44,30 52,40 60,38" fill="none" stroke="#ef4444" strokeWidth="2"/><rect x="18" y="20" width="44" height="22" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="3,2" opacity="0.5"/><line x1="60" y1="38" x2="60" y2="56" stroke="#ef4444" strokeWidth="3"/></svg>
+                  <span className="text-[7px] text-gray-500">하강 렉탱글</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="8" stroke="#ef4444" strokeWidth="1.5"/><rect x="4" y="8" width="12" height="48" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">슬러스트다운</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. 하강 플래그 + 햇빛두동강 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><line x1="5" y1="3" x2="5" y2="32" stroke="#ef4444" strokeWidth="3"/><polyline points="5,32 18,38 30,34 44,40 58,36 69,42" fill="none" stroke="#ef4444" strokeWidth="1.5"/><polyline points="5,32 18,26 30,22 44,28 58,24 69,30" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="3,2"/></svg>
+                  <span className="text-[7px] text-gray-500">하강 플래그</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="8" stroke="#22c55e" strokeWidth="1.5"/><rect x="4" y="8" width="12" height="18" fill="#22c55e" rx="1"/><rect x="4" y="26" width="12" height="28" fill="#ef4444" rx="1"/><line x1="10" y1="54" x2="10" y2="57" stroke="#ef4444" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">햇빛두동강</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★★☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 7. 하강 페넌트 + 다시돌려줘 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 72 58" width="52" height="46"><line x1="5" y1="3" x2="5" y2="30" stroke="#ef4444" strokeWidth="3"/><polyline points="5,30 20,36 36,32 52,37 67,34" fill="none" stroke="#ef4444" strokeWidth="1.5"/><polyline points="5,30 20,24 36,26 52,29 67,34" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3,2"/></svg>
+                  <span className="text-[7px] text-gray-500">하강 페넌트</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="10" stroke="#22c55e" strokeWidth="1.5"/><rect x="4" y="10" width="12" height="14" fill="#22c55e" rx="1"/><rect x="4" y="24" width="12" height="30" fill="#ef4444" rx="1"/><line x1="10" y1="54" x2="10" y2="57" stroke="#ef4444" strokeWidth="1.5"/></svg>
+                  <span className="text-[7px] text-gray-500">다시돌려줘</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★☆☆</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 8. 런던시간 + -핀버 */}
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 mb-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 44 58" width="34" height="46"><circle cx="22" cy="27" r="20" fill="none" stroke="#7c3aed" strokeWidth="2"/><circle cx="22" cy="27" r="2" fill="#7c3aed"/><line x1="22" y1="27" x2="11" y2="41" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round"/><line x1="22" y1="27" x2="22" y2="9" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round"/><text x="22" y="55" textAnchor="middle" fontSize="9" fill="#7c3aed" fontWeight="bold">런던</text></svg>
+                  <span className="text-[7px] text-gray-500">런던 시간</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">+</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <svg viewBox="0 0 20 58" width="16" height="46"><line x1="10" y1="3" x2="10" y2="18" stroke="#ef4444" strokeWidth="2"/><rect x="4" y="18" width="12" height="12" fill="#ef4444" rx="1"/></svg>
+                  <span className="text-[7px] text-gray-500">-핀버</span>
+                </div>
+                <span className="text-[10px] text-gray-600 font-bold">=</span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full px-1.5 py-0.5">매도</span>
+                  <span className="text-[8px] text-red-400">★★★★☆</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
