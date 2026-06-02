@@ -12,6 +12,7 @@ export const US_SECTORS: SectorGroup[] = [
       { name: 'Google C', ticker: 'GOOG' },
       { name: 'Meta', ticker: 'META' },
       { name: 'Amazon', ticker: 'AMZN' },
+      { name: 'Tesla', ticker: 'TSLA' },
     ],
   },
   {
@@ -88,7 +89,6 @@ export const US_SECTORS: SectorGroup[] = [
   {
     sector: '전자/하드웨어',
     stocks: [
-      { name: 'Tesla', ticker: 'TSLA' },
       { name: 'Dell', ticker: 'DELL' },
       { name: 'HP', ticker: 'HPQ' },
       { name: 'Seagate', ticker: 'STX' },
