@@ -690,10 +690,18 @@ function ChartTab() {
       {/* 지지선과 저항선 */}
       <div>
         <SectionTitle emoji="📏" title="지지선과 저항선" />
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-300 leading-relaxed mb-3 mt-3">
-          <pre className="whitespace-pre">{` ─────────────────  ← 저항선 (주가가 이 부근에서 자주 막힘)
-   ↗↘↗↘↗↘↗
- ─────────────────  ← 지지선 (주가가 이 부근에서 자주 반등)`}</pre>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mt-3 mb-3">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-red-400"></div>
+              <span className="text-[10px] text-red-400 shrink-0">저항선 (자주 막힘)</span>
+            </div>
+            <div className="text-center text-sm text-gray-500 tracking-widest">↗↘↗↘↗↘↗</div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-green-400"></div>
+              <span className="text-[10px] text-green-400 shrink-0">지지선 (자주 반등)</span>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
