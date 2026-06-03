@@ -30,14 +30,12 @@ export default function NoteCard({ note, onChange }: Props) {
         {/* Meta */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {note.type === 'stock' && note.ticker && (
+            {note.ticker && (
               <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
-                📌 {note.ticker}
-              </span>
-            )}
-            {note.type === 'study' && (
-              <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">
-                📚 공부
+                📌 {note.stockName ?? note.ticker}
+                {note.stockName && note.ticker !== note.stockName && (
+                  <span className="text-blue-300/60 ml-1">({note.ticker})</span>
+                )}
               </span>
             )}
             {note.sectors.map((s) => (
@@ -75,6 +73,18 @@ export default function NoteCard({ note, onChange }: Props) {
           >
             {expanded ? '접기 ▲' : '더 보기 ▼'}
           </button>
+        )}
+
+        {/* 뉴스 링크 */}
+        {note.newsLink && (
+          <a
+            href={note.newsLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-400 hover:text-blue-300 truncate transition-colors"
+          >
+            🔗 {note.newsLink}
+          </a>
         )}
 
         {/* Date */}

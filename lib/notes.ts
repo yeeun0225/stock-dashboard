@@ -19,6 +19,7 @@ export interface Note {
   stockName?: string
   sectors: string[]
   content: string
+  newsLink?: string
   createdAt: number
   updatedAt: number
 }
