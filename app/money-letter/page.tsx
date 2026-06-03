@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -37,30 +37,78 @@ function groupByDate(letters: Letter[]) {
   return map
 }
 
+// 이메일 HTML에 반응형 CSS 주입
+function wrapEmailHtml(html: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { box-sizing: border-box !important; }
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif !important;
+  }
+  body { padding: 0 !important; }
+  /* 고정 너비 테이블 반응형으로 */
+  table { max-width: 100% !important; width: 100% !important; }
+  td { word-break: break-word !important; }
+  /* 이미지 반응형 */
+  img { max-width: 100% !important; height: auto !important; display: block !important; }
+  /* 최상위 컨테이너 너비 제한 해제 */
+  [style*="max-width"] { max-width: 100% !important; }
+  [style*="width: 600"] { width: 100% !important; }
+  [style*="width:600"] { width: 100% !important; }
+  /* 좌우 패딩 */
+  body > * { padding-left: 12px !important; padding-right: 12px !important; }
+</style>
+</head>
+<body>${html}</body>
+</html>`
+}
+
 // ── 개별 레터 뷰어 ────────────────────────────────────────────
 function LetterModal({ letter, onClose }: { letter: Letter; onClose: () => void }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [iframeHeight, setIframeHeight] = useState(600)
+
+  const handleIframeLoad = () => {
+    const iframe = iframeRef.current
+    if (!iframe?.contentDocument?.body) return
+    const h = iframe.contentDocument.body.scrollHeight
+    setIframeHeight(h + 32)
+  }
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center overflow-y-auto p-4">
-      <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-2xl my-8">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center overflow-y-auto p-2 sm:p-4">
+      <div className="w-full max-w-2xl bg-white rounded-2xl my-8 overflow-hidden shadow-2xl">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 sticky top-0 bg-gray-900 rounded-t-2xl">
-          <div>
-            <span className={`text-[10px] font-bold ${SENDER_INFO[letter.sender].color} mr-2`}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`text-[10px] font-bold shrink-0 ${
+              letter.sender === 'uppity' ? 'text-violet-600' : 'text-blue-600'
+            }`}>
               {SENDER_INFO[letter.sender].label}
             </span>
-            <span className="text-xs text-gray-500">{fmtDate(letter.received_at)}</span>
+            <span className="text-xs text-gray-400 shrink-0">{fmtDate(letter.received_at)}</span>
+            <p className="text-xs font-semibold text-gray-700 truncate">{letter.subject}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">×</button>
+          <button
+            onClick={onClose}
+            className="shrink-0 ml-2 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 text-lg leading-none transition-colors"
+          >×</button>
         </div>
-        {/* 제목 */}
-        <div className="px-5 py-3 border-b border-gray-800">
-          <p className="text-sm font-bold text-white leading-snug">{letter.subject}</p>
-        </div>
-        {/* 본문 */}
-        <div
-          className="px-5 py-4 prose prose-invert prose-sm max-w-none"
-          style={{ fontSize: '13px', lineHeight: '1.7', color: '#d1d5db' }}
-          dangerouslySetInnerHTML={{ __html: letter.content }}
+        {/* 이메일 본문 - iframe으로 원본 그대로 렌더링 */}
+        <iframe
+          ref={iframeRef}
+          srcDoc={wrapEmailHtml(letter.content)}
+          sandbox="allow-same-origin allow-popups"
+          onLoad={handleIframeLoad}
+          style={{ width: '100%', height: `${iframeHeight}px`, border: 'none', display: 'block' }}
+          title={letter.subject}
         />
       </div>
     </div>
