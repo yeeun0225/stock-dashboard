@@ -715,6 +715,13 @@ export default function ChartPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-3xl">📊</span>
+          <div>
+            <h1 className="text-lg font-bold text-white">차트 보는법</h1>
+            <p className="text-xs text-gray-500">패턴을 읽으면 매매 타이밍이 보인다</p>
+          </div>
+        </div>
         <ChartTab />
       </div>
     </div>

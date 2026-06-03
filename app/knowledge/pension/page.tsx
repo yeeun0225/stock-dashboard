@@ -245,6 +245,13 @@ export default function PensionPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-3xl">🏦</span>
+          <div>
+            <h1 className="text-lg font-bold text-white">연금 가이드</h1>
+            <p className="text-xs text-gray-500">노후를 준비하는 연금과 절세 계좌</p>
+          </div>
+        </div>
         <PensionTab />
       </div>
     </div>

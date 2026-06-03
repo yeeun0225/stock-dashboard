@@ -198,6 +198,13 @@ export default function GlossaryPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-3xl">📖</span>
+          <div>
+            <h1 className="text-lg font-bold text-white">주식 용어집</h1>
+            <p className="text-xs text-gray-500">꼭 알아야 할 핵심 용어 112개</p>
+          </div>
+        </div>
         <GlossaryTab />
       </div>
     </div>
