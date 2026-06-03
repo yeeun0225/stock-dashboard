@@ -48,9 +48,14 @@ const NAV: NavGroup[] = [
     matchPaths: ['/ipo'],
   },
   {
-    label:      '지식인',
-    href:       '/knowledge',
-    matchPaths: ['/knowledge'],
+    label:       '지식인',
+    defaultHref: '/knowledge/glossary',
+    matchPaths:  ['/knowledge'],
+    children: [
+      { label: '주식 용어집', href: '/knowledge/glossary' },
+      { label: '연금 가이드', href: '/knowledge/pension' },
+      { label: '차트 보는법', href: '/knowledge/chart' },
+    ],
   },
   {
     label:       'MY',
