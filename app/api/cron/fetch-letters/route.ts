@@ -3,6 +3,8 @@ import { fetchNewEmails } from '@/lib/gmail'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 // Vercel cron + 수동 호출 모두 지원
 export async function GET(req: Request) {
