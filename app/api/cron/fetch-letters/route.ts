@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { fetchNewEmails } from '@/lib/gmail'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const after = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000)
     const emails = await fetchNewEmails(String(after))
 
+    const supabaseAdmin = getSupabaseAdmin()
     let inserted = 0
     for (const email of emails) {
       const { error } = await supabaseAdmin
