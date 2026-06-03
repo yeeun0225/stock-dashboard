@@ -36,10 +36,10 @@ const NAV: NavGroup[] = [
   {
     label:       '종목 리서치',
     defaultHref: '/news',
-    matchPaths:  ['/news', '/stock-news', '/research'],
+    matchPaths:  ['/news', '/research', '/money-terror'],
     children: [
-      { label: '리서치', href: '/news',        matchPaths: ['/news', '/research'] },
-      { label: '뉴스',   href: '/stock-news' },
+      { label: '리서치',   href: '/news',          matchPaths: ['/news', '/research'] },
+      { label: '머니테러', href: '/money-terror' },
     ],
   },
   {
