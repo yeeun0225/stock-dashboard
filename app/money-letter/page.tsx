@@ -142,16 +142,12 @@ function SenderSection({
 }) {
   const [showAll, setShowAll] = useState(false)
   const info = SENDER_INFO[sender]
-  const grouped = groupByDate(letters)
+
+  const LIMIT = 5
+  const recent = letters.slice(0, LIMIT)
+  const displayLetters = showAll ? letters : recent
+  const grouped = groupByDate(displayLetters)
   const dates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a))
-
-  // 최신 10개
-  const recent = letters.slice(0, 10)
-  const recentGrouped = groupByDate(recent)
-  const recentDates = Array.from(recentGrouped.keys()).sort((a, b) => b.localeCompare(a))
-
-  const displayDates = showAll ? dates : recentDates
-  const displayGrouped = showAll ? grouped : recentGrouped
 
   return (
     <div className={`border ${info.border} ${info.bg} rounded-2xl p-4`}>
@@ -161,12 +157,12 @@ function SenderSection({
           <span className={`text-sm font-bold ${info.color}`}>{info.label}</span>
           <span className="text-xs text-gray-500">{letters.length}개</span>
         </div>
-        {letters.length > 10 && (
+        {letters.length > LIMIT && (
           <button
             onClick={() => setShowAll(v => !v)}
             className={`text-xs font-medium ${info.color} hover:opacity-70 transition-opacity`}
           >
-            {showAll ? '접기' : `더보기 +${letters.length - 10}`}
+            {showAll ? '접기 ↑' : `더보기 +${letters.length - LIMIT}`}
           </button>
         )}
       </div>
@@ -176,11 +172,11 @@ function SenderSection({
         <p className="text-xs text-gray-500 text-center py-6">아직 받은 뉴스레터가 없어요</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {displayDates.map(date => (
+          {dates.map(date => (
             <div key={date}>
               <p className="text-[10px] text-gray-500 font-medium mb-1.5">{date}</p>
               <div className="flex flex-col gap-1.5">
-                {displayGrouped.get(date)!.map(l => (
+                {grouped.get(date)!.map(l => (
                   <LetterCard key={l.id} letter={l} onClick={() => onSelect(l)} />
                 ))}
               </div>
