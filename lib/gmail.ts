@@ -1,12 +1,19 @@
-import { google } from 'googleapis'
+// googleapis 대신 Gmail REST API 직접 호출 (Vercel 호환)
 
-export function getGmailClient() {
-  const auth = new google.auth.OAuth2(
-    process.env.GMAIL_CLIENT_ID,
-    process.env.GMAIL_CLIENT_SECRET,
-  )
-  auth.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN })
-  return google.gmail({ version: 'v1', auth })
+async function getAccessToken(): Promise<string> {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:     process.env.GMAIL_CLIENT_ID!,
+      client_secret: process.env.GMAIL_CLIENT_SECRET!,
+      refresh_token: process.env.GMAIL_REFRESH_TOKEN!,
+      grant_type:    'refresh_token',
+    }),
+  })
+  const data = await res.json()
+  if (!data.access_token) throw new Error('Failed to get access token: ' + JSON.stringify(data))
+  return data.access_token
 }
 
 // Base64 URL 디코딩
@@ -49,8 +56,8 @@ export interface ParsedEmail {
   gmailId:    string
   sender:     'uppity' | 'dig'
   subject:    string
-  content:    string   // HTML
-  receivedAt: string   // ISO string
+  content:    string
+  receivedAt: string
 }
 
 const SENDERS = {
@@ -58,36 +65,33 @@ const SENDERS = {
   dig:    'dig@mk.co.kr',
 }
 
-export async function fetchNewEmails(afterDate: string): Promise<ParsedEmail[]> {
-  const gmail = getGmailClient()
+export async function fetchNewEmails(afterTimestamp: string): Promise<ParsedEmail[]> {
+  const token = await getAccessToken()
   const results: ParsedEmail[] = []
 
   for (const [key, email] of Object.entries(SENDERS)) {
-    const query = `from:${email} after:${afterDate}`
-    const listRes = await gmail.users.messages.list({
-      userId: 'me',
-      q: query,
-      maxResults: 30,
-    })
-
-    const messages = listRes.data.messages ?? []
+    const query = `from:${email} after:${afterTimestamp}`
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=30`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const listData = await listRes.json()
+    const messages: { id: string }[] = listData.messages ?? []
 
     for (const msg of messages) {
-      if (!msg.id) continue
+      const detailRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      const detail = await detailRes.json()
 
-      const detail = await gmail.users.messages.get({
-        userId: 'me',
-        id: msg.id,
-        format: 'full',
-      })
-
-      const headers = detail.data.payload?.headers ?? []
-      const subject = headers.find(h => h.name === 'Subject')?.value ?? '(제목 없음)'
+      const headers: { name: string; value: string }[] = detail.payload?.headers ?? []
+      const subject    = headers.find(h => h.name === 'Subject')?.value ?? '(제목 없음)'
       const dateHeader = headers.find(h => h.name === 'Date')?.value ?? ''
       const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString()
 
-      const html = extractHtml(detail.data.payload)
-      const text = extractText(detail.data.payload)
+      const html    = extractHtml(detail.payload)
+      const text    = extractText(detail.payload)
       const content = html || `<pre>${text}</pre>`
 
       results.push({
