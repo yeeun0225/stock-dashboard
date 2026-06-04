@@ -1,20 +1,29 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { type Note, loadNotes, SECTORS, formatNoteDate } from '@/lib/notes'
+import { type Note, SECTORS, formatNoteDate } from '@/lib/notes'
 import NoteEditor from '@/components/NoteEditor'
 import NoteCard from '@/components/NoteCard'
+import LoginScreen from '@/components/LoginScreen'
+import { useAuth } from '@/lib/auth-client'
+import { dbLoadNotes, dbSaveNote } from '@/lib/db'
 
 export default function StudyPage() {
+  const { user, loading: authLoading, signOut } = useAuth()
+
   const [notes, setNotes] = useState<Note[]>([])
   const [showEditor, setShowEditor] = useState(false)
 
   // 필터 상태
-  const [search,       setSearch]       = useState('')   // 종목 검색
+  const [search,       setSearch]       = useState('')
   const [activeSector, setActiveSector] = useState<string | null>(null)
   const [activeTab,    setActiveTab]    = useState<'sector' | 'date'>('date')
 
-  const refresh = useCallback(() => setNotes(loadNotes()), [])
+  const refresh = useCallback(async () => {
+    if (!user?.id) return
+    setNotes(await dbLoadNotes(user.id))
+  }, [user?.id])
+
   useEffect(() => { refresh() }, [refresh])
 
   // 섹터 필터 목록
@@ -48,19 +57,36 @@ export default function StudyPage() {
     byDate[d].push(n)
   }
 
+  // 인증 로딩 중
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-gray-500 text-sm animate-pulse">불러오는 중...</p>
+      </div>
+    )
+  }
+
+  // 비로그인
+  if (!user) return <LoginScreen fullPage />
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 pb-24">
 
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-gray-950 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
         <h1 className="text-base font-bold text-white">📚 공부 노트</h1>
-        <button
-          onClick={() => setShowEditor(true)}
-          className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          <span>+</span>
-          <span>새 노트</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEditor(true)}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            <span>+</span>
+            <span>새 노트</span>
+          </button>
+          <button onClick={signOut} className="text-xs text-gray-600 hover:text-gray-400 transition-colors px-1">
+            로그아웃
+          </button>
+        </div>
       </header>
 
       <main className="px-3 py-4 max-w-3xl mx-auto flex flex-col gap-4">
@@ -146,7 +172,7 @@ export default function StudyPage() {
                   <div key={date} className="flex flex-col gap-2">
                     <p className="text-xs font-semibold text-gray-500">{date}</p>
                     {dateNotes.map(n => (
-                      <NoteCard key={n.id} note={n} onChange={refresh} />
+                      <NoteCard key={n.id} note={n} onChange={refresh} userId={user.id} />
                     ))}
                   </div>
                 ))}
@@ -164,7 +190,7 @@ export default function StudyPage() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {sNotes.map(n => (
-                        <NoteCard key={n.id} note={n} onChange={refresh} />
+                        <NoteCard key={n.id} note={n} onChange={refresh} userId={user.id} />
                       ))}
                     </div>
                   </div>
@@ -178,7 +204,7 @@ export default function StudyPage() {
                         <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">태그 없음</span>
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {untagged.map(n => <NoteCard key={n.id} note={n} onChange={refresh} />)}
+                        {untagged.map(n => <NoteCard key={n.id} note={n} onChange={refresh} userId={user.id} />)}
                       </div>
                     </div>
                   ) : null
@@ -192,7 +218,11 @@ export default function StudyPage() {
       {showEditor && (
         <NoteEditor
           initial={{ type: 'study' }}
-          onSave={() => { setShowEditor(false); refresh() }}
+          onSave={async (note) => {
+            if (user?.id) await dbSaveNote(user.id, note)
+            setShowEditor(false)
+            refresh()
+          }}
           onClose={() => setShowEditor(false)}
         />
       )}

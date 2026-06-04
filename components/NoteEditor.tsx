@@ -5,7 +5,7 @@ import { SECTORS, type Note, saveNote, genId } from '@/lib/notes'
 
 interface Props {
   initial?: Partial<Note>
-  onSave: (note: Note) => void
+  onSave: (note: Note) => void | Promise<void>
   onClose: () => void
 }
 

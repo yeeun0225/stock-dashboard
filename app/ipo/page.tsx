@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import type { IpoData, IpoItem } from '@/app/api/ipo/route'
+import LoginScreen from '@/components/LoginScreen'
+import { useAuth } from '@/lib/auth-client'
+import { dbLoadIpoEntries, dbSaveIpoEntry, dbDeleteIpoEntry } from '@/lib/db'
 
 // ── 날짜 유틸 ─────────────────────────────────────────────────
 function toDateStr(d: Date): string {
@@ -162,7 +165,7 @@ function MyIpoFormModal({
   initial, onSave, onClose,
 }: {
   initial: IpoFormState
-  onSave:  (f: IpoFormState) => void
+  onSave:  (f: IpoFormState) => void | Promise<void>
   onClose: () => void
 }) {
   const [form, setForm] = useState<IpoFormState>(initial)
@@ -354,8 +357,9 @@ function MyIpoEntryCard({
 // ── 내 공모주 탭 ──────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
 function MyIpoTab() {
+  const { user, loading: authLoading, signOut } = useAuth()
+
   const [entries,   setEntries]   = useState<MyIpoEntry[]>([])
-  const [hydrated,  setHydrated]  = useState(false)
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -363,19 +367,13 @@ function MyIpoTab() {
   const [showForm, setShowForm] = useState(false)
   const [editId,   setEditId]   = useState<string | null>(null)
 
-  // localStorage 로드 (hydration 안전)
+  // Supabase 로드
   useEffect(() => {
-    try {
-      const s = localStorage.getItem('my-ipo-entries')
-      if (s) setEntries(JSON.parse(s))
-    } catch { /* ignore */ }
-    setHydrated(true)
-  }, [])
-
-  // localStorage 저장
-  useEffect(() => {
-    if (hydrated) localStorage.setItem('my-ipo-entries', JSON.stringify(entries))
-  }, [entries, hydrated])
+    if (!user?.id) return
+    dbLoadIpoEntries(user.id)
+      .then(rows => setEntries(rows.map(r => ({ ...r, market: r.market as MarketType }))))
+      .catch(() => {})
+  }, [user?.id])
 
   const monthEntries = useMemo(() =>
     entries
@@ -419,7 +417,7 @@ function MyIpoTab() {
     offeringPrice: '', allocatedShares: '', exitPrice: '',
   }
 
-  const handleSave = useCallback((form: IpoFormState) => {
+  const handleSave = useCallback(async (form: IpoFormState) => {
     const entry: MyIpoEntry = {
       id:              editId ?? `ipo-${Date.now()}`,
       name:            form.name.trim(),
@@ -434,17 +432,26 @@ function MyIpoTab() {
     setEntries(prev =>
       editId ? prev.map(e => e.id === editId ? entry : e) : [entry, ...prev]
     )
+    if (user?.id) await dbSaveIpoEntry(user.id, entry)
     setShowForm(false)
     setEditId(null)
-  }, [editId])
+  }, [editId, user?.id])
 
   const handleEdit   = (id: string) => { setEditId(id); setShowForm(true) }
-  const handleDelete = (id: string) => {
-    if (window.confirm('이 참여 내역을 삭제할까요?'))
-      setEntries(prev => prev.filter(e => e.id !== id))
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('이 참여 내역을 삭제할까요?')) return
+    if (user?.id) await dbDeleteIpoEntry(user.id, id)
+    setEntries(prev => prev.filter(e => e.id !== id))
   }
   const handleClose = () => { setShowForm(false); setEditId(null) }
   const handleAdd   = () => { setEditId(null); setShowForm(true) }
+
+  if (authLoading) return (
+    <div className="flex items-center justify-center py-16">
+      <p className="text-gray-500 text-sm animate-pulse">불러오는 중...</p>
+    </div>
+  )
+  if (!user) return <LoginScreen fullPage={false} />
 
   return (
     <div className="flex flex-col gap-4">

@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import StockDetailCard, { type ExtendedQuote } from '@/components/StockDetailCard'
-
-const STORAGE_KEY = 'mlm-watchlist'
+import LoginScreen from '@/components/LoginScreen'
+import { useAuth } from '@/lib/auth-client'
+import { dbLoadWatchlist, dbSaveWatchlist } from '@/lib/db'
 
 // ── 이미지 캡처 & 공유 ────────────────────────────────────────
 type CaptureMode = 'save' | 'share'
@@ -13,12 +14,11 @@ async function captureCards(mode: CaptureMode, targetId: string): Promise<void> 
   const el = document.getElementById(targetId)
   if (!el) throw new Error('capture target not found')
 
-  // 동적 import — 첫 클릭 시에만 로드
   const html2canvas = (await import('html2canvas')).default
 
   const canvas = await html2canvas(el, {
-    backgroundColor: '#030712',   // gray-950
-    scale: 2,                      // 레티나 품질
+    backgroundColor: '#030712',
+    scale: 2,
     useCORS: true,
     logging: false,
   })
@@ -34,32 +34,29 @@ async function captureCards(mode: CaptureMode, targetId: string): Promise<void> 
     .replace(/\.$/, '')
   const fileName = `관심종목_${today}.png`
 
-  // 모바일: 네이티브 공유 시트 (카카오톡, 인스타 등 포함)
   if (mode === 'share') {
     const file = new File([blob], fileName, { type: 'image/png' })
     if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: '관심종목' })
       return
     }
-    // 데스크탑 폴백 → 이미지 다운로드
   }
 
-  // 이미지 저장 (또는 공유 불가 폴백)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  a.click()
+  a.href = url; a.download = fileName; a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 // ── 페이지 ────────────────────────────────────────────────────
 export default function CardsPage() {
-  const [tickers, setTickers]     = useState<string[]>([])
-  const [quotes,  setQuotes]      = useState<ExtendedQuote[]>([])
-  const [loading, setLoading]     = useState(true)
+  const { user, loading: authLoading, signOut } = useAuth()
+
+  const [tickers,     setTickers]     = useState<string[]>([])
+  const [quotes,      setQuotes]      = useState<ExtendedQuote[]>([])
+  const [loading,     setLoading]     = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [capturing, setCapturing] = useState<CaptureMode | null>(null)
+  const [capturing,   setCapturing]   = useState<CaptureMode | null>(null)
   const captureRef = useRef<HTMLDivElement>(null)
 
   const fetchQuotes = useCallback(async (tickerList: string[]) => {
@@ -74,25 +71,24 @@ export default function CardsPage() {
     finally { setLoading(false) }
   }, [])
 
+  // 로그인 후 watchlist 로드
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      const list: string[] = saved ? JSON.parse(saved) : []
-      setTickers(list)
-      fetchQuotes(list)
-    } catch { setLoading(false) }
-  }, [fetchQuotes])
+    if (!user) return
+    dbLoadWatchlist(user.id)
+      .then(list => { setTickers(list); fetchQuotes(list) })
+      .catch(() => setLoading(false))
+  }, [user, fetchQuotes])
 
   useEffect(() => {
     const id = setInterval(() => fetchQuotes(tickers), 5 * 60 * 1000)
     return () => clearInterval(id)
   }, [tickers, fetchQuotes])
 
-  const removeTicker = (ticker: string) => {
+  const removeTicker = async (ticker: string) => {
     const next = tickers.filter(t => t !== ticker)
     setTickers(next)
     setQuotes(q => q.filter(x => x.ticker !== ticker))
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    if (user) await dbSaveWatchlist(user.id, next)
   }
 
   const handleCapture = async (mode: CaptureMode) => {
@@ -108,11 +104,20 @@ export default function CardsPage() {
     }
   }
 
-  const timeLabel = lastUpdated?.toLocaleTimeString('ko-KR', {
-    hour: '2-digit', minute: '2-digit',
-  })
+  // 인증 로딩 중
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-gray-500 text-sm animate-pulse">불러오는 중...</p>
+      </div>
+    )
+  }
 
-  const hasCards = quotes.length > 0
+  // 비로그인
+  if (!user) return <LoginScreen fullPage />
+
+  const timeLabel = lastUpdated?.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  const hasCards  = quotes.length > 0
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -126,52 +131,48 @@ export default function CardsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 공유 버튼 — 카드가 있을 때만 표시 */}
           {hasCards && (
             <>
               <button
                 onClick={() => handleCapture('save')}
                 disabled={!!capturing || loading}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
-                title="PNG 이미지로 저장"
               >
-                {capturing === 'save' ? (
-                  <span className="animate-pulse">처리 중…</span>
-                ) : (
-                  <>📷 <span className="hidden sm:inline">이미지 저장</span></>
-                )}
+                {capturing === 'save' ? <span className="animate-pulse">처리 중…</span>
+                  : <>📷 <span className="hidden sm:inline">이미지 저장</span></>}
               </button>
               <button
                 onClick={() => handleCapture('share')}
                 disabled={!!capturing || loading}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
-                title="카카오톡·인스타 등으로 공유 (모바일)"
               >
-                {capturing === 'share' ? (
-                  <span className="animate-pulse">처리 중…</span>
-                ) : (
-                  <>📤 <span className="hidden sm:inline">공유하기</span></>
-                )}
+                {capturing === 'share' ? <span className="animate-pulse">처리 중…</span>
+                  : <>📤 <span className="hidden sm:inline">공유하기</span></>}
               </button>
             </>
           )}
 
-          {timeLabel && (
-            <span className="text-xs text-gray-600">{timeLabel} 기준</span>
-          )}
+          {timeLabel && <span className="text-xs text-gray-600">{timeLabel} 기준</span>}
+
           <button
             onClick={() => fetchQuotes(tickers)}
             disabled={loading}
             className="text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40"
-            title="새로고침"
           >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
+          </button>
+
+          {/* 로그아웃 */}
+          <button
+            onClick={signOut}
+            className="text-xs text-gray-600 hover:text-gray-400 transition-colors px-1"
+            title={user.email ?? '로그아웃'}
+          >
+            로그아웃
           </button>
         </div>
       </header>
@@ -185,39 +186,22 @@ export default function CardsPage() {
         ) : tickers.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-4">
             <p className="text-gray-500 text-sm">관심 종목을 먼저 추가해주세요</p>
-            <Link
-              href="/"
-              className="text-sm text-blue-400 hover:text-blue-300 underline"
-            >
+            <Link href="/" className="text-sm text-blue-400 hover:text-blue-300 underline">
               대시보드에서 종목 추가하기
             </Link>
           </div>
         ) : (
-          /* ── 캡처 대상 영역 ──────────────────────────────── */
-          <div
-            id="cards-capture-target"
-            ref={captureRef}
-            className="bg-gray-950"
-          >
-            {/* 캡처 시 상단에 포함될 타이틀 바 */}
+          <div id="cards-capture-target" ref={captureRef} className="bg-gray-950">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-800/60">
               <div>
                 <p className="text-sm font-bold text-white">📊 관심종목</p>
-                {timeLabel && (
-                  <p className="text-xs text-gray-600 mt-0.5">{timeLabel} 기준</p>
-                )}
+                {timeLabel && <p className="text-xs text-gray-600 mt-0.5">{timeLabel} 기준</p>}
               </div>
-              {/* 캡처 시에만 URL 표시 (인터랙티브 아님) */}
               <span className="text-xs text-gray-700">stock-dashboard-pi-three.vercel.app</span>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {quotes.map(q => (
-                <StockDetailCard
-                  key={q.ticker}
-                  quote={q}
-                  onRemove={() => removeTicker(q.ticker)}
-                />
+                <StockDetailCard key={q.ticker} quote={q} onRemove={() => removeTicker(q.ticker)} />
               ))}
             </div>
           </div>

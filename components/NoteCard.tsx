@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { type Note, deleteNote, formatNoteDate } from '@/lib/notes'
+import { dbSaveNote, dbDeleteNote } from '@/lib/db'
 import NoteEditor from './NoteEditor'
 
 interface Props {
-  note: Note
+  note:     Note
   onChange: () => void
+  userId?:  string   // 로그인 시 Supabase sync
 }
 
 // 비밀번호 모달
@@ -40,7 +42,7 @@ function PasswordModal({
   )
 }
 
-export default function NoteCard({ note, onChange }: Props) {
+export default function NoteCard({ note, onChange, userId }: Props) {
   const [editing,    setEditing]    = useState(false)
   const [expanded,   setExpanded]   = useState(false)
   const [showShare,  setShowShare]  = useState(false)
@@ -51,8 +53,9 @@ export default function NoteCard({ note, onChange }: Props) {
     ? note.content.slice(0, 120) + '...'
     : note.content
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirm('이 메모를 삭제할까요?')) return
+    if (userId) await dbDeleteNote(userId, note.id)
     deleteNote(note.id)
     onChange()
   }
@@ -146,7 +149,11 @@ export default function NoteCard({ note, onChange }: Props) {
       {editing && (
         <NoteEditor
           initial={note}
-          onSave={() => { setEditing(false); onChange() }}
+          onSave={async (savedNote) => {
+            if (userId) await dbSaveNote(userId, savedNote)
+            setEditing(false)
+            onChange()
+          }}
           onClose={() => setEditing(false)}
         />
       )}
