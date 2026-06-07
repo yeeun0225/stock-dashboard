@@ -18,8 +18,31 @@ async function uploadImage(file: File): Promise<string | null> {
   return data.url as string
 }
 
+// contentEditable에서 커서 위치에 HTML 삽입
+function insertHtmlAtCursor(html: string) {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return
+  const range = sel.getRangeAt(0)
+  range.deleteContents()
+  const el = document.createElement('div')
+  el.innerHTML = html
+  const frag = document.createDocumentFragment()
+  let lastNode: Node | null = null
+  while (el.firstChild) {
+    lastNode = el.firstChild
+    frag.appendChild(lastNode)
+  }
+  range.insertNode(frag)
+  if (lastNode) {
+    const newRange = range.cloneRange()
+    newRange.setStartAfter(lastNode)
+    newRange.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(newRange)
+  }
+}
+
 export default function NoteEditor({ initial, onSave, onClose }: Props) {
-  const [content,     setContent]     = useState(initial?.content ?? '')
   const [ticker,      setTicker]      = useState(initial?.ticker ?? '')
   const [stockName,   setStockName]   = useState(initial?.stockName ?? '')
   const [sectors,     setSectors]     = useState<string[]>(initial?.sectors ?? [])
@@ -27,8 +50,18 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
   const [imageUrls,   setImageUrls]   = useState<string[]>(initial?.imageUrls ?? [])
   const [uploading,   setUploading]   = useState(false)
   const [sectorInput, setSectorInput] = useState('')
+  const [isEmpty,     setIsEmpty]     = useState(!(initial?.content))
 
+  const editorRef  = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 초기 내용 세팅
+  useEffect(() => {
+    if (editorRef.current && initial?.content) {
+      editorRef.current.innerHTML = initial.content
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -45,7 +78,38 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
     setSectorInput('')
   }
 
-  // 파일 선택 → 업로드
+  // 내용 변경 감지 (placeholder 처리)
+  const handleInput = () => {
+    const el = editorRef.current
+    if (!el) return
+    setIsEmpty(el.innerText.trim() === '' && el.innerHTML === '')
+  }
+
+  // 붙여넣기 핸들러 - 이미지면 업로드 후 인라인 삽입
+  const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = Array.from(e.clipboardData.items)
+    const imageItem = items.find(i => i.type.startsWith('image/'))
+
+    if (!imageItem) return // 텍스트는 기본 동작 (그냥 붙여넣기)
+
+    e.preventDefault()
+    setUploading(true)
+    const file = imageItem.getAsFile()
+    if (file) {
+      const url = await uploadImage(file)
+      if (url) {
+        // 커서 위치에 이미지 삽입
+        editorRef.current?.focus()
+        insertHtmlAtCursor(
+          `<img src="${url}" alt="첨부이미지" style="max-width:100%;border-radius:8px;margin:4px 0;display:block;" /><br/>`
+        )
+        setIsEmpty(false)
+      }
+    }
+    setUploading(false)
+  }
+
+  // 파일 선택 → 업로드 → 맨 끝에 삽입
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
@@ -60,26 +124,13 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  // 내용 textarea에 이미지 붙여넣기
-  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = Array.from(e.clipboardData.items)
-    const imageItem = items.find(i => i.type.startsWith('image/'))
-    if (!imageItem) return
-    e.preventDefault()
-    setUploading(true)
-    const file = imageItem.getAsFile()
-    if (file) {
-      const url = await uploadImage(file)
-      if (url) setImageUrls(prev => [...prev, url])
-    }
-    setUploading(false)
-  }
-
   const removeImage = (url: string) =>
     setImageUrls(prev => prev.filter(u => u !== url))
 
   const handleSave = () => {
-    if (!content.trim() && imageUrls.length === 0) return
+    const htmlContent = editorRef.current?.innerHTML ?? ''
+    const textContent = editorRef.current?.innerText.trim() ?? ''
+    if (!textContent && imageUrls.length === 0) return
     const now = Date.now()
     const note: Note = {
       id:        initial?.id ?? genId(),
@@ -87,7 +138,7 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
       ticker:    ticker.trim() || undefined,
       stockName: stockName.trim() || ticker.trim() || undefined,
       sectors,
-      content:   content.trim(),
+      content:   htmlContent,
       newsLink:  newsLink.trim() || undefined,
       imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       createdAt: initial?.createdAt ?? now,
@@ -97,7 +148,7 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
     onSave(note)
   }
 
-  const canSave = content.trim() || imageUrls.length > 0
+  const canSave = !isEmpty || imageUrls.length > 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
@@ -115,20 +166,31 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
 
-          {/* 내용 */}
+          {/* 내용 (리치 에디터) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-gray-400">
-              내용 <span className="text-gray-600 font-normal">(이미지 복사 후 붙여넣기 가능)</span>
+              내용 <span className="text-gray-600 font-normal">— 텍스트 작성 중 이미지 붙여넣기(Cmd/Ctrl+V) 가능</span>
             </label>
-            <textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              onPaste={handlePaste}
-              placeholder="오늘 공부한 내용, 뉴스 인사이트, 종목 분석을 자유롭게 적어보세요&#10;이미지를 복사(Ctrl+C)하고 여기에 붙여넣기(Ctrl+V)하면 첨부돼요"
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none transition-colors"
-              rows={5}
-              autoFocus
-            />
+            <div className="relative">
+              {/* 플레이스홀더 */}
+              {isEmpty && (
+                <p className="absolute top-3 left-3 text-sm text-gray-600 pointer-events-none select-none leading-relaxed">
+                  오늘 공부한 내용, 뉴스 인사이트, 종목 분석을 자유롭게 적어보세요{'\n'}이미지를 복사하고 여기에 붙여넣으면 내용 중간에 삽입돼요
+                </p>
+              )}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={handleInput}
+                onPaste={handlePaste}
+                className="min-h-[140px] w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
+                style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+              />
+            </div>
+            {uploading && (
+              <p className="text-xs text-blue-400 animate-pulse">⏳ 이미지 업로드 중...</p>
+            )}
           </div>
 
           {/* 종목 태그 */}
@@ -161,10 +223,7 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
                 placeholder="반도체, AI, 환율 등 (Enter로 추가)"
                 className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
               />
-              <button
-                onClick={addCustomSector}
-                className="px-4 py-2 text-xs font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors"
-              >추가</button>
+              <button onClick={addCustomSector} className="px-4 py-2 text-xs font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors">추가</button>
             </div>
             {sectors.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -178,51 +237,33 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
             )}
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {SECTORS.filter(s => !sectors.includes(s)).map(s => (
-                <button
-                  key={s}
-                  onClick={() => toggleSector(s)}
-                  className="text-xs px-2.5 py-1 rounded-full border bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 transition-all"
-                >{s}</button>
+                <button key={s} onClick={() => toggleSector(s)}
+                  className="text-xs px-2.5 py-1 rounded-full border bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 transition-all">
+                  {s}
+                </button>
               ))}
             </div>
           </div>
 
-          {/* 사진 첨부 */}
+          {/* 사진 첨부 (별도 첨부용) */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-gray-400">사진 첨부 <span className="text-gray-600">(선택)</span></label>
-
-            {/* 업로드 버튼 */}
+            <label className="text-xs font-medium text-gray-400">사진 첨부 <span className="text-gray-600">(선택 — 내용과 별개로 첨부)</span></label>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-gray-700 hover:border-gray-500 rounded-xl py-3 text-xs text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
             >
-              {uploading ? (
-                <><span className="animate-spin">⏳</span> 업로드 중...</>
-              ) : (
-                <><span>📷</span> 사진 선택하기</>
-              )}
+              {uploading ? <><span className="animate-spin">⏳</span> 업로드 중...</> : <><span>📷</span> 사진 선택하기</>}
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-
-            {/* 첨부된 이미지 미리보기 */}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
             {imageUrls.length > 0 && (
               <div className="flex flex-col gap-2">
                 {imageUrls.map((url, i) => (
                   <div key={url} className="relative group rounded-xl overflow-hidden border border-gray-700">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`첨부 이미지 ${i + 1}`} className="w-full object-cover max-h-60" />
-                    <button
-                      onClick={() => removeImage(url)}
-                      className="absolute top-2 right-2 bg-black/60 hover:bg-red-500/80 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors"
-                    >×</button>
+                    <img src={url} alt={`첨부 ${i + 1}`} className="w-full object-cover max-h-60" />
+                    <button onClick={() => removeImage(url)}
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-red-500/80 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs transition-colors">×</button>
                   </div>
                 ))}
               </div>

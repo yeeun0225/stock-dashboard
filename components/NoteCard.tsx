@@ -48,10 +48,13 @@ export default function NoteCard({ note, onChange, userId }: Props) {
   const [showShare,  setShowShare]  = useState(false)
   const [shareMsg,   setShareMsg]   = useState<string | null>(null)
 
-  const isLong = note.content.length > 120
-  const displayContent = isLong && !expanded
-    ? note.content.slice(0, 120) + '...'
+  // HTML 콘텐츠 여부 확인
+  const isHtml = note.content.includes('<')
+  const plainText = isHtml
+    ? note.content.replace(/<[^>]*>/g, '').trim()
     : note.content
+  const isLong = plainText.length > 120 || (isHtml && note.content.length > 300)
+  const displayContent = note.content
 
   const handleDelete = async () => {
     if (!confirm('이 메모를 삭제할까요?')) return
@@ -123,7 +126,17 @@ export default function NoteCard({ note, onChange, userId }: Props) {
         )}
 
         {/* 내용 */}
-        <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{displayContent}</p>
+        {isHtml ? (
+          <div
+            className={`text-sm text-gray-200 leading-relaxed overflow-hidden transition-all ${!expanded ? 'max-h-48' : ''}`}
+            style={{ wordBreak: 'break-word' }}
+            dangerouslySetInnerHTML={{ __html: displayContent }}
+          />
+        ) : (
+          <p className={`text-sm text-gray-200 whitespace-pre-wrap leading-relaxed overflow-hidden ${!expanded ? 'line-clamp-4' : ''}`}>
+            {displayContent}
+          </p>
+        )}
         {isLong && (
           <button onClick={() => setExpanded(v => !v)} className="text-xs text-gray-500 hover:text-gray-300 text-left">
             {expanded ? '접기 ▲' : '더 보기 ▼'}
