@@ -130,6 +130,22 @@ export default function NoteCard({ note, onChange, userId }: Props) {
           </button>
         )}
 
+        {/* 첨부 이미지 */}
+        {note.imageUrls && note.imageUrls.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {note.imageUrls.map((url, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={url}
+                src={url}
+                alt={`첨부 이미지 ${i + 1}`}
+                className="w-full rounded-lg object-cover max-h-60 cursor-pointer"
+                onClick={() => window.open(url, '_blank')}
+              />
+            ))}
+          </div>
+        )}
+
         {/* 뉴스 링크 */}
         {note.newsLink && (
           <a href={note.newsLink} target="_blank" rel="noopener noreferrer"

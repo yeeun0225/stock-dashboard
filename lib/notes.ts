@@ -20,6 +20,7 @@ export interface Note {
   sectors: string[]
   content: string
   newsLink?: string
+  imageUrls?: string[]
   createdAt: number
   updatedAt: number
 }
