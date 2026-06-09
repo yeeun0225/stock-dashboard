@@ -85,12 +85,24 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
     setIsEmpty(el.innerText.trim() === '' && el.innerHTML === '')
   }
 
-  // 붙여넣기 핸들러 - 이미지면 업로드 후 인라인 삽입
+  // 붙여넣기 핸들러 - 이미지면 업로드, 텍스트면 서식 제거 후 줄바꿈 보존
   const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
     const items = Array.from(e.clipboardData.items)
     const imageItem = items.find(i => i.type.startsWith('image/'))
 
-    if (!imageItem) return // 텍스트는 기본 동작 (그냥 붙여넣기)
+    if (!imageItem) {
+      // 텍스트 붙여넣기: 외부 HTML 서식 제거, 줄바꿈만 <br>로 변환
+      e.preventDefault()
+      const text = e.clipboardData.getData('text/plain')
+      const html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
+      insertHtmlAtCursor(html)
+      handleInput()
+      return
+    }
 
     e.preventDefault()
     setUploading(true)

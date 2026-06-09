@@ -162,7 +162,12 @@ function RefCard({ note, onDelete }: { note: RefNote; onDelete: () => void }) {
   const [showDelPw, setShowDelPw] = useState(false)
   const [delError, setDelError] = useState('')
 
-  const isLong = note.content.length > 120
+  // HTML 콘텐츠 여부 확인 (리치 에디터로 작성된 노트)
+  const isHtml = note.content.includes('<')
+  const plainText = isHtml
+    ? note.content.replace(/<[^>]*>/g, '').trim()
+    : note.content
+  const isLong = plainText.length > 120
 
   const handleDelete = async (pw: string) => {
     const res = await fetch('/api/reference', {
@@ -201,9 +206,17 @@ function RefCard({ note, onDelete }: { note: RefNote; onDelete: () => void }) {
         </div>
 
         {/* 내용 */}
-        <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-          {isLong && !expanded ? note.content.slice(0, 120) + '...' : note.content}
-        </p>
+        {isHtml ? (
+          <div
+            className={`text-sm text-gray-200 leading-relaxed overflow-hidden transition-all ${!expanded ? 'max-h-32' : ''}`}
+            style={{ wordBreak: 'break-word' }}
+            dangerouslySetInnerHTML={{ __html: note.content }}
+          />
+        ) : (
+          <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+            {isLong && !expanded ? note.content.slice(0, 120) + '...' : note.content}
+          </p>
+        )}
         {isLong && (
           <button onClick={() => setExpanded(v => !v)} className="text-xs text-gray-500 hover:text-gray-300 text-left">
             {expanded ? '접기 ▲' : '더 보기 ▼'}
