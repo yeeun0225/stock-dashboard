@@ -91,15 +91,18 @@ export default function NoteEditor({ initial, onSave, onClose }: Props) {
     const imageItem = items.find(i => i.type.startsWith('image/'))
 
     if (!imageItem) {
-      // 텍스트 붙여넣기: 외부 HTML 서식 제거, 줄바꿈만 <br>로 변환
+      // 텍스트 붙여넣기: 외부 HTML 서식 제거, 줄바꿈 보존
+      // \r\n(Windows), \r(구Mac), \n(Unix) 모두 <br>로 변환
       e.preventDefault()
       const text = e.clipboardData.getData('text/plain')
       const html = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>')
-      insertHtmlAtCursor(html)
+        .replace(/\r\n|\r|\n/g, '<br>')
+      // execCommand는 deprecated이지만 contentEditable HTML 삽입의 표준 브라우저 방식
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      document.execCommand('insertHTML', false, html)
       handleInput()
       return
     }
