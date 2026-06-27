@@ -61,6 +61,7 @@ export const US_SECTORS: SectorGroup[] = [
   {
     sector: '우주',
     stocks: [
+      { name: 'SpaceX', ticker: 'SPCX' },
       { name: 'Rocket Lab', ticker: 'RKLB' },
       { name: 'Planet Labs', ticker: 'PL' },
       { name: 'Iridium', ticker: 'IRDM' },
