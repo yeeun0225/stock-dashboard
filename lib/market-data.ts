@@ -127,41 +127,48 @@ export async function fetchMarketData(): Promise<MarketData | null> {
  * 점수 구간: 0-24 Extreme Fear · 25-44 Fear · 45-54 Neutral
  *            55-74 Greed · 75-100 Extreme Greed
  */
+// CNN Fear & Greed Index API
 export async function fetchFearGreedData(): Promise<FearGreedData | null> {
   try {
+    const res = await fetch(
+      'https://production.dataviz.cnn.io/index/fearandgreed/graphdata',
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'Referer':    'https://edition.cnn.com/',
+        },
+        next: { revalidate: 0 },
+      }
+    )
+    if (!res.ok) throw new Error(`CNN API ${res.status}`)
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const quotes = await yf.quote(['^VIX', 'SPY'], {}, { validateResult: false }) as any[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vixQ = quotes.find((q: any) => q?.symbol === '^VIX')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const spyQ = quotes.find((q: any) => q?.symbol === 'SPY')
+    const json: any = await res.json()
+    const score = json?.fear_and_greed?.score
+    const rating = json?.fear_and_greed?.rating
 
-    const vix      = Number(vixQ?.regularMarketPrice)
-    const spyPrice = Number(spyQ?.regularMarketPrice)
-    const sma200   = Number(spyQ?.twoHundredDayAverage)
+    if (score == null) throw new Error('CNN score missing')
 
-    if (!vix || !spyPrice || !sma200) return null
+    const value = Math.round(Number(score))
 
-    // VIX 점수: VIX 12→90, VIX 20→60, VIX 30→25, VIX 38→0
-    const vixScore = Math.max(0, Math.min(100, 132 - vix * 3.5))
-
-    // SPY 모멘텀 점수: 200일 SMA 대비 이격도 ±10% → 점수 ±30p
-    const momentumPct   = (spyPrice / sma200 - 1) * 100
-    const momentumScore = Math.max(0, Math.min(100, 50 + momentumPct * 3))
-
-    // 가중 합산 (VIX 55% + 모멘텀 45%)
-    const value = Math.round(vixScore * 0.55 + momentumScore * 0.45)
-
+    // CNN rating → 영문 classification 매핑
+    const classMap: Record<string, string> = {
+      'extreme fear':  'Extreme Fear',
+      'fear':          'Fear',
+      'neutral':       'Neutral',
+      'greed':         'Greed',
+      'extreme greed': 'Extreme Greed',
+    }
     const classification =
-      value >= 75 ? 'Extreme Greed' :
-      value >= 55 ? 'Greed'         :
-      value >= 45 ? 'Neutral'       :
-      value >= 25 ? 'Fear'          :
-                    'Extreme Fear'
+      classMap[String(rating).toLowerCase()] ??
+      (value >= 75 ? 'Extreme Greed' :
+       value >= 55 ? 'Greed'         :
+       value >= 45 ? 'Neutral'       :
+       value >= 25 ? 'Fear'          : 'Extreme Fear')
 
     return { value, classification, timestamp: Date.now() }
   } catch (err) {
-    console.error('[fetchFearGreedData]', err)
+    console.error('[fetchFearGreedData] CNN API 실패:', err)
     return null
   }
 }
