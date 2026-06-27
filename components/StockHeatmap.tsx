@@ -16,6 +16,7 @@ export interface SectorData {
 
 export interface HeatmapResponse {
   sectors: SectorData[]
+  session?: 'pre' | 'regular' | 'post' | 'closed'
   timestamp: number
 }
 
@@ -150,7 +151,19 @@ export default function StockHeatmap({ apiPath }: Props) {
             </span>
           ))}
         </div>
-        <span className="text-xs text-gray-600">{updateTime} 기준</span>
+        <div className="flex items-center gap-2">
+          {data.session === 'pre' && (
+            <span className="text-xs font-medium text-blue-400 border border-blue-700 px-1.5 py-0.5 rounded">
+              NXT 장전
+            </span>
+          )}
+          {data.session === 'post' && (
+            <span className="text-xs font-medium text-purple-400 border border-purple-700 px-1.5 py-0.5 rounded">
+              NXT 장후
+            </span>
+          )}
+          <span className="text-xs text-gray-600">{updateTime} 기준</span>
+        </div>
       </div>
 
       {data.sectors.map((s) => (

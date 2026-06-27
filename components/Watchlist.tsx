@@ -14,6 +14,14 @@ interface StockQuote {
   currency: string
 }
 
+interface SearchResult {
+  ticker: string
+  tossSymbol: string
+  name: string
+  englishName: string
+  market: 'KR' | 'US'
+}
+
 const STORAGE_KEY = 'mlm-watchlist'
 const REFRESH_MS = 5 * 60 * 1000
 
@@ -79,7 +87,11 @@ export default function Watchlist() {
   const [addError, setAddError] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [highlight, setHighlight] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   // Load from localStorage (client only)
   useEffect(() => {
@@ -115,14 +127,47 @@ export default function Watchlist() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
   }
 
-  const addTicker = async () => {
-    const t = input.trim().toUpperCase()
+  // 검색 (디바운스) — 한글명/영문명/티커 모두 매칭
+  useEffect(() => {
+    const q = input.trim()
+    if (!q) { setResults([]); setShowDropdown(false); return }
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/stock-search?q=${encodeURIComponent(q)}`)
+        const data: SearchResult[] = await res.json()
+        setResults(Array.isArray(data) ? data : [])
+        setShowDropdown(true)
+        setHighlight(0)
+      } catch {
+        setResults([])
+      }
+    }, 200)
+    return () => clearTimeout(id)
+  }, [input])
+
+  // 바깥 클릭 시 드롭다운 닫기
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const addTicker = async (ticker: string) => {
+    const t = ticker.trim()
     if (!t) return
-    if (tickers.includes(t)) { setAddError('이미 추가된 종목이에요'); return }
+    if (tickers.includes(t)) {
+      setAddError('이미 추가된 종목이에요')
+      setShowDropdown(false)
+      return
+    }
     setAdding(true)
     setAddError('')
     try {
-      const res = await fetch(`/api/quote?tickers=${t}`)
+      const res = await fetch(`/api/quote?tickers=${encodeURIComponent(t)}`)
       const data: StockQuote[] = await res.json()
       if (!data[0] || data[0].price === 0) {
         setAddError('종목을 찾을 수 없어요')
@@ -131,12 +176,42 @@ export default function Watchlist() {
       saveTickers([...tickers, t])
       setQuotes((prev) => [...prev, data[0]])
       setInput('')
+      setResults([])
+      setShowDropdown(false)
       // 추가 후 종목카드 탭으로 이동
       router.push('/cards')
     } catch {
       setAddError('오류가 발생했어요')
     } finally {
       setAdding(false)
+    }
+  }
+
+  // 엔터/추가 버튼: 검색결과 우선, 없으면 입력값을 직접 티커로 시도
+  const handleSubmit = () => {
+    if (results.length > 0) {
+      addTicker(results[highlight]?.ticker ?? results[0].ticker)
+    } else if (input.trim()) {
+      addTicker(input.trim().toUpperCase())
+    }
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown || results.length === 0) {
+      if (e.key === 'Enter') handleSubmit()
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlight((h) => Math.min(h + 1, results.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlight((h) => Math.max(h - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSubmit()
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
     }
   }
 
@@ -174,22 +249,51 @@ export default function Watchlist() {
       </div>
 
       {/* Add form */}
-      <div className="flex gap-1.5">
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => { setInput(e.target.value); setAddError('') }}
-          onKeyDown={(e) => e.key === 'Enter' && addTicker()}
-          placeholder="티커 입력 (예: AAPL, 005930.KS)"
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 min-w-0"
-        />
-        <button
-          onClick={addTicker}
-          disabled={adding || !input.trim()}
-          className="bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
-        >
-          {adding ? '확인 중..' : '추가'}
-        </button>
+      <div ref={boxRef} className="relative">
+        <div className="flex gap-1.5">
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => { setInput(e.target.value); setAddError('') }}
+            onKeyDown={onKeyDown}
+            onFocus={() => results.length > 0 && setShowDropdown(true)}
+            placeholder="종목명·티커 검색 (예: 삼성전자, 애플, NVDA)"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-500 min-w-0"
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={adding || !input.trim()}
+            className="bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors shrink-0"
+          >
+            {adding ? '확인 중..' : '추가'}
+          </button>
+        </div>
+
+        {/* 자동완성 드롭다운 */}
+        {showDropdown && results.length > 0 && (
+          <ul className="absolute z-20 left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden max-h-72 overflow-y-auto">
+            {results.map((r, i) => (
+              <li key={r.ticker}>
+                <button
+                  onMouseEnter={() => setHighlight(i)}
+                  onClick={() => addTicker(r.ticker)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
+                    i === highlight ? 'bg-gray-700' : 'hover:bg-gray-750'
+                  }`}
+                >
+                  <span className="text-sm shrink-0">{r.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-white truncate block">{r.name}</span>
+                    {r.englishName && r.englishName !== r.name && (
+                      <span className="text-[10px] text-gray-500 truncate block">{r.englishName}</span>
+                    )}
+                  </span>
+                  <span className="text-[10px] font-mono text-gray-400 shrink-0">{r.ticker}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {addError && <p className="text-xs text-red-400 -mt-1">{addError}</p>}
 
@@ -198,7 +302,7 @@ export default function Watchlist() {
         <p className="text-xs text-gray-600 text-center py-6">
           관심 종목을 추가해보세요
           <br />
-          <span className="text-gray-700">US: AAPL · KR: 005930.KS · JP: 7203.T</span>
+          <span className="text-gray-700">종목명·티커로 검색 (삼성전자, 애플, NVDA)</span>
         </p>
       ) : (
         <div className="flex flex-col gap-1.5">

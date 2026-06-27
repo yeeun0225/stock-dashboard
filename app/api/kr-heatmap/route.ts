@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import YahooFinance from 'yahoo-finance2'
 import { KR_SECTORS } from '@/lib/kr-stocks'
+import { fetchTossPrices, fetchTossPreviousCloses, detectKrSession } from '@/lib/toss'
 
 export const dynamic = 'force-dynamic'
-
-const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 
 export interface KrStockQuote {
   ticker: string
@@ -18,35 +16,44 @@ export interface KrSectorData {
   stocks: KrStockQuote[]
 }
 
+// Yahoo Finance format (005930.KS) → Toss format (005930)
+function toTossSymbol(ticker: string): string {
+  return ticker.split('.')[0]
+}
+
 export async function GET() {
   try {
-    const allTickers = KR_SECTORS.flatMap((s) => s.stocks.map((st) => st.ticker))
+    const session = detectKrSession()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = (await yf.quote(allTickers, {}, { validateResult: false })) as any[]
+    // Collect all Toss symbols
+    const allSymbols = KR_SECTORS.flatMap((s) => s.stocks.map((st) => toTossSymbol(st.ticker)))
+    const uniqueSymbols = [...new Set(allSymbols)]
 
-    // Build a map by symbol so order doesn't matter
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const quoteMap = new Map<string, any>()
-    for (const q of results) {
-      if (q?.symbol) quoteMap.set(q.symbol, q)
-    }
+    const [prices, prevCloses] = await Promise.all([
+      fetchTossPrices(uniqueSymbols),
+      fetchTossPreviousCloses(uniqueSymbols),
+    ])
 
     const sectors: KrSectorData[] = KR_SECTORS.map((sg) => ({
       sector: sg.sector,
       stocks: sg.stocks.map((st) => {
-        const q = quoteMap.get(st.ticker)
+        const sym = toTossSymbol(st.ticker)
+        const price = prices.get(sym)?.lastPrice ?? 0
+        const prevClose = prevCloses.get(sym) ?? 0
+        const changePercent =
+          prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0
+
         return {
           ticker: st.ticker,
           name: st.name,
-          price: q?.regularMarketPrice ?? 0,
-          changePercent: q?.regularMarketChangePercent ?? 0,
+          price,
+          changePercent,
         }
       }),
     }))
 
     return NextResponse.json(
-      { sectors, timestamp: Date.now() },
+      { sectors, session, timestamp: Date.now() },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   } catch (err) {

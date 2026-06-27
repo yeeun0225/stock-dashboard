@@ -22,7 +22,9 @@ export default function MarketHeatmap() {
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           증시 히트맵
         </h2>
-        <span className="text-xs text-gray-600">Yahoo Finance</span>
+        <span className="text-xs text-gray-600">
+          {active === 'jp' ? 'Yahoo Finance' : '토스증권'}
+        </span>
       </div>
 
       <div className="flex gap-1 bg-gray-800 rounded-lg p-1 w-fit">

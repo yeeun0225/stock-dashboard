@@ -1,34 +1,33 @@
 import { NextResponse } from 'next/server'
-import YahooFinance from 'yahoo-finance2'
 import { US_SECTORS } from '@/lib/us-stocks'
+import { fetchTossPrices, fetchTossPreviousCloses } from '@/lib/toss'
 
 export const dynamic = 'force-dynamic'
 
-const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
-
 export async function GET() {
   try {
-    const allTickers = US_SECTORS.flatMap((s) => s.stocks.map((st) => st.ticker))
+    // US tickers (AAPL 등) are already valid Toss symbols
+    const allSymbols = US_SECTORS.flatMap((s) => s.stocks.map((st) => st.ticker))
+    const uniqueSymbols = [...new Set(allSymbols)]
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = (await yf.quote(allTickers, {}, { validateResult: false })) as any[]
-
-    // Build a map by symbol so order doesn't matter
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const quoteMap = new Map<string, any>()
-    for (const q of results) {
-      if (q?.symbol) quoteMap.set(q.symbol, q)
-    }
+    const [prices, prevCloses] = await Promise.all([
+      fetchTossPrices(uniqueSymbols),
+      fetchTossPreviousCloses(uniqueSymbols),
+    ])
 
     const sectors = US_SECTORS.map((sg) => ({
       sector: sg.sector,
       stocks: sg.stocks.map((st) => {
-        const q = quoteMap.get(st.ticker)
+        const price = prices.get(st.ticker)?.lastPrice ?? 0
+        const prevClose = prevCloses.get(st.ticker) ?? 0
+        const changePercent =
+          prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0
+
         return {
           ticker: st.ticker,
           name: st.name,
-          price: q?.regularMarketPrice ?? 0,
-          changePercent: q?.regularMarketChangePercent ?? 0,
+          price,
+          changePercent,
         }
       }),
     }))
