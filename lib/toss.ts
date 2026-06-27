@@ -7,7 +7,17 @@
 
 import { loadPrevCloses, savePrevCloses } from './prev-close-store'
 
-const BASE = 'https://openapi.tossinvest.com'
+// 토스 호출 베이스 URL.
+// 토스 IP 화이트리스트 때문에 Vercel 에서 직접 호출 불가 →
+// 등록된 IP 의 프록시(TOSS_API_BASE)를 거치도록 한다. 미설정 시 직접 호출(로컬/등록 IP).
+const BASE = process.env.TOSS_API_BASE || 'https://openapi.tossinvest.com'
+
+// 프록시 인증 헤더 (TOSS_PROXY_SECRET 설정 시에만 부착)
+// Bypass-Tunnel-Reminder: localtunnel 인터스티셜 페이지 우회용
+function proxyHeaders(): Record<string, string> {
+  const s = process.env.TOSS_PROXY_SECRET
+  return s ? { 'X-Proxy-Secret': s, 'Bypass-Tunnel-Reminder': 'true' } : {}
+}
 
 // ── Token cache ───────────────────────────────────────────────────────────────
 let tokenCache: { value: string; expiresAt: number } | null = null
@@ -16,7 +26,7 @@ let tokenFetchPromise: Promise<string> | null = null
 async function fetchNewToken(): Promise<string> {
   const res = await fetch(`${BASE}/oauth2/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...proxyHeaders() },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: process.env.TOSS_API_KEY ?? '',
@@ -63,7 +73,7 @@ export async function fetchTossStockInfos(
   for (let i = 0; i < symbols.length; i += CHUNK) {
     const chunk = symbols.slice(i, i + CHUNK)
     const res = await fetch(`${BASE}/api/v1/stocks?symbols=${chunk.join(',')}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...proxyHeaders() },
       cache: 'no-store',
     })
     if (!res.ok) {
@@ -101,7 +111,7 @@ export async function fetchTossPrices(symbols: string[]): Promise<Map<string, To
   for (let i = 0; i < symbols.length; i += CHUNK) {
     const chunk = symbols.slice(i, i + CHUNK)
     const res = await fetch(`${BASE}/api/v1/prices?symbols=${chunk.join(',')}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...proxyHeaders() },
       cache: 'no-store',
     })
     if (!res.ok) {
@@ -137,7 +147,7 @@ async function fetchOnePreviousClose(symbol: string, token: string): Promise<num
     try {
       const res = await fetch(
         `${BASE}/api/v1/candles?symbol=${symbol}&interval=1d&count=2`,
-        { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+        { headers: { Authorization: `Bearer ${token}`, ...proxyHeaders() }, cache: 'no-store' }
       )
 
       if (res.status === 429) {
