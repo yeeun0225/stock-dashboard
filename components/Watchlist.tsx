@@ -21,7 +21,13 @@ interface SearchResult {
   tossSymbol: string
   name: string
   englishName: string
-  market: 'KR' | 'US'
+  market: 'KR' | 'US' | 'JP'
+}
+
+const MARKET_FLAG: Record<SearchResult['market'], string> = {
+  KR: '🇰🇷',
+  US: '🇺🇸',
+  JP: '🇯🇵',
 }
 
 const STORAGE_KEY = 'mlm-watchlist'
@@ -296,7 +302,7 @@ export default function Watchlist() {
                     i === highlight ? 'bg-gray-700' : 'hover:bg-gray-750'
                   }`}
                 >
-                  <span className="text-sm shrink-0">{r.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
+                  <span className="text-sm shrink-0">{MARKET_FLAG[r.market]}</span>
                   <span className="flex-1 min-w-0">
                     <span className="text-xs font-medium text-white truncate block">{r.name}</span>
                     {r.englishName && r.englishName !== r.name && (

@@ -6,6 +6,7 @@
  */
 import { KR_SECTORS } from './kr-stocks'
 import { US_SECTORS } from './us-stocks'
+import { KR_ETFS, JP_ETFS } from './kr-etfs'
 import { fetchTossStockInfos } from './toss'
 
 export interface StockMasterEntry {
@@ -13,7 +14,7 @@ export interface StockMasterEntry {
   tossSymbol: string // 토스 심볼 (005930, AAPL)
   name: string // 표시명 (한글 우선)
   englishName: string // 영문명
-  market: 'KR' | 'US'
+  market: 'KR' | 'US' | 'JP'
 }
 
 // 야후 티커 → 토스 심볼 (005930.KS → 005930, AAPL → AAPL)
@@ -25,16 +26,26 @@ let masterCache: StockMasterEntry[] | null = null
 let masterBuildPromise: Promise<StockMasterEntry[]> | null = null
 
 async function buildMaster(): Promise<StockMasterEntry[]> {
-  // 1) KR — kr-stocks가 이미 한글명 보유
-  const krEntries: StockMasterEntry[] = KR_SECTORS.flatMap((sg) =>
-    sg.stocks.map((st) => ({
-      ticker: st.ticker,
-      tossSymbol: toTossSymbol(st.ticker),
-      name: st.name,
-      englishName: '',
-      market: 'KR' as const,
-    }))
-  )
+  // 1) KR — kr-stocks(종목) + kr-etfs(ETF), 둘 다 한글명 보유
+  const krEntries: StockMasterEntry[] = [
+    ...KR_SECTORS.flatMap((sg) => sg.stocks),
+    ...KR_ETFS,
+  ].map((st) => ({
+    ticker: st.ticker,
+    tossSymbol: toTossSymbol(st.ticker),
+    name: st.name,
+    englishName: '',
+    market: 'KR' as const,
+  }))
+
+  // 1-2) JP — 일본 대표 ETF (토스 미지원, 야후 시세). 한글명 직접 지정
+  const jpEntries: StockMasterEntry[] = JP_ETFS.map((e) => ({
+    ticker: e.ticker,
+    tossSymbol: e.ticker, // 토스 미사용
+    name: e.name,
+    englishName: e.englishName,
+    market: 'JP' as const,
+  }))
 
   // 2) US — 영문명 보유, 토스로 한글명 보강
   const usBase = US_SECTORS.flatMap((sg) =>
@@ -66,7 +77,36 @@ async function buildMaster(): Promise<StockMasterEntry[]> {
     console.error('[stock-master] US enrich 실패, 영문명으로 폴백:', err)
   }
 
-  return [...krEntries, ...usEntries]
+  return [...krEntries, ...jpEntries, ...usEntries]
+}
+
+// 야후 티커 변환: 토스 market → 야후 접미사
+function tossToYahooTicker(symbol: string, market: string): string {
+  if (market === 'KOSPI' || market === 'KR_ETC') return `${symbol}.KS`
+  if (market === 'KOSDAQ') return `${symbol}.KQ`
+  return symbol // 미국은 그대로
+}
+
+// 검색 폴백: 입력값을 토스 심볼로 직접 조회 (마스터에 없는 ETF/종목까지)
+export async function searchTossDirect(query: string): Promise<StockMasterEntry | null> {
+  const sym = query.trim().toUpperCase()
+  // 한글 등 심볼이 될 수 없는 입력은 스킵 (토스는 이름 검색 미지원)
+  if (!/^[A-Z0-9.\-]+$/.test(sym)) return null
+  const tossSym = sym.split('.')[0]
+  try {
+    const infos = await fetchTossStockInfos([tossSym])
+    const info = infos.get(tossSym)
+    if (!info) return null
+    return {
+      ticker: tossToYahooTicker(tossSym, info.market),
+      tossSymbol: tossSym,
+      name: info.name,
+      englishName: info.englishName,
+      market: info.market.startsWith('KO') || info.market === 'KR_ETC' ? 'KR' : 'US',
+    }
+  } catch {
+    return null
+  }
 }
 
 async function getMaster(): Promise<StockMasterEntry[]> {
