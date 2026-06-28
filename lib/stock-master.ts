@@ -6,7 +6,7 @@
  */
 import { KR_SECTORS } from './kr-stocks'
 import { US_SECTORS } from './us-stocks'
-import { KR_ETFS, JP_ETFS } from './kr-etfs'
+import { KR_ETFS, JP_ETFS, US_LEVERAGED_ETFS } from './kr-etfs'
 import { fetchTossStockInfos } from './toss'
 
 export interface StockMasterEntry {
@@ -57,6 +57,15 @@ async function buildMaster(): Promise<StockMasterEntry[]> {
     }))
   )
 
+  // 미국 레버리지 ETF (한글 별칭 직접 지정 — 토스가 한글명 미제공)
+  const usLevEntries: StockMasterEntry[] = US_LEVERAGED_ETFS.map((e) => ({
+    ticker: e.ticker,
+    tossSymbol: e.ticker,
+    name: e.name,
+    englishName: e.englishName,
+    market: 'US' as const,
+  }))
+
   let usEntries: StockMasterEntry[] = usBase.map((e) => ({
     ...e,
     name: e.englishName, // 폴백: 영문명
@@ -77,7 +86,7 @@ async function buildMaster(): Promise<StockMasterEntry[]> {
     console.error('[stock-master] US enrich 실패, 영문명으로 폴백:', err)
   }
 
-  return [...krEntries, ...jpEntries, ...usEntries]
+  return [...krEntries, ...jpEntries, ...usLevEntries, ...usEntries]
 }
 
 // 야후 티커 변환: 토스 market → 야후 접미사
