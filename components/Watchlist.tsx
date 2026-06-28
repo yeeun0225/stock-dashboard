@@ -328,7 +328,10 @@ export default function Watchlist() {
           <span className="text-gray-700">종목명·티커로 검색 (삼성전자, 애플, NVDA)</span>
         </p>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div
+          className="flex flex-col gap-1.5 overflow-y-auto pr-1"
+          style={{ maxHeight: '340px' }}
+        >
           {quotes.length === 0 && loading ? (
             <div className="text-xs text-gray-500 text-center py-4 animate-pulse">로딩 중...</div>
           ) : (
