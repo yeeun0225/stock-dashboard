@@ -138,11 +138,12 @@ export default function Watchlist() {
     return () => clearInterval(id)
   }, [tickers, fetchQuotes])
 
-  const saveTickers = (list: string[]) => {
+  // DB 저장 완료를 기다림 — 종목카드(/cards)로 이동 전에 반영 보장
+  const saveTickers = async (list: string[]) => {
     setTickers(list)
     // 로그인 시 계정 DB 저장(종목카드와 공유), 비로그인 시 localStorage
     if (user) {
-      dbSaveWatchlist(user.id, list).catch(() => {})
+      await dbSaveWatchlist(user.id, list).catch(() => {})
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
     }
@@ -194,7 +195,8 @@ export default function Watchlist() {
         setAddError('종목을 찾을 수 없어요')
         return
       }
-      saveTickers([...tickers, t])
+      // DB 저장 완료를 기다린 뒤 종목카드로 이동 (race 방지)
+      await saveTickers([...tickers, t])
       setQuotes((prev) => [...prev, data[0]])
       setInput('')
       setResults([])
@@ -237,7 +239,7 @@ export default function Watchlist() {
   }
 
   const removeTicker = (t: string) => {
-    saveTickers(tickers.filter((x) => x !== t))
+    void saveTickers(tickers.filter((x) => x !== t))
     setQuotes((prev) => prev.filter((q) => q.ticker !== t))
   }
 
