@@ -6,6 +6,7 @@
  */
 import { KR_SECTORS } from './kr-stocks'
 import { US_SECTORS } from './us-stocks'
+import { JP_SECTORS } from './jp-stocks'
 import { KR_ETFS, JP_ETFS, US_LEVERAGED_ETFS } from './kr-etfs'
 import { fetchTossStockInfos } from './toss'
 
@@ -38,14 +39,24 @@ async function buildMaster(): Promise<StockMasterEntry[]> {
     market: 'KR' as const,
   }))
 
-  // 1-2) JP — 일본 대표 ETF (토스 미지원, 야후 시세). 한글명 직접 지정
-  const jpEntries: StockMasterEntry[] = JP_ETFS.map((e) => ({
+  // 1-2) JP — 일본 히트맵 종목(한글명 보유) + 대표 ETF. 토스 미지원이라 야후 시세
+  const jpStockEntries: StockMasterEntry[] = JP_SECTORS.flatMap((sg) =>
+    sg.stocks.map((st) => ({
+      ticker: st.ticker,
+      tossSymbol: st.ticker, // 토스 미사용
+      name: st.name,
+      englishName: '',
+      market: 'JP' as const,
+    }))
+  )
+  const jpEtfEntries: StockMasterEntry[] = JP_ETFS.map((e) => ({
     ticker: e.ticker,
-    tossSymbol: e.ticker, // 토스 미사용
+    tossSymbol: e.ticker,
     name: e.name,
     englishName: e.englishName,
     market: 'JP' as const,
   }))
+  const jpEntries = [...jpStockEntries, ...jpEtfEntries]
 
   // 2) US — 영문명 보유, 토스로 한글명 보강
   const usBase = US_SECTORS.flatMap((sg) =>

@@ -61,6 +61,7 @@ export const JP_SECTORS: SectorGroup[] = [
       { name: '히타치', ticker: '6501.T' },
       { name: '미쓰비시전기', ticker: '6503.T' },
       { name: '코마츠', ticker: '6301.T' },
+      { name: '하모닉드라이브', ticker: '6324.T' },
     ],
   },
   {
