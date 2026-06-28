@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { type Signal, SIGNAL_CONFIG, loadSignals } from '@/lib/signals'
+import { useAuth } from '@/lib/auth-client'
+import { dbLoadWatchlist, dbSaveWatchlist } from '@/lib/db'
 
 interface StockQuote {
   ticker: string
@@ -80,6 +82,7 @@ function StockCard({ quote, onRemove }: { quote: StockQuote; onRemove: () => voi
 
 export default function Watchlist() {
   const router = useRouter()
+  const { user } = useAuth()
   const [tickers, setTickers] = useState<string[]>([])
   const [quotes, setQuotes] = useState<StockQuote[]>([])
   const [input, setInput] = useState('')
@@ -93,13 +96,20 @@ export default function Watchlist() {
   const inputRef = useRef<HTMLInputElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
 
-  // Load from localStorage (client only)
+  // 관심종목 로드 — 로그인 시 계정 DB(종목카드와 동일 소스), 비로그인 시 localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) setTickers(JSON.parse(saved))
-    } catch {}
-  }, [])
+    if (user === undefined) return // 인증 로딩 중
+    if (user) {
+      dbLoadWatchlist(user.id)
+        .then((list) => setTickers(list))
+        .catch(() => {})
+    } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) setTickers(JSON.parse(saved))
+      } catch {}
+    }
+  }, [user])
 
   const fetchQuotes = useCallback(async (tickerList: string[]) => {
     if (tickerList.length === 0) { setQuotes([]); return }
@@ -124,7 +134,12 @@ export default function Watchlist() {
 
   const saveTickers = (list: string[]) => {
     setTickers(list)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    // 로그인 시 계정 DB 저장(종목카드와 공유), 비로그인 시 localStorage
+    if (user) {
+      dbSaveWatchlist(user.id, list).catch(() => {})
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    }
   }
 
   // 검색 (디바운스) — 한글명/영문명/티커 모두 매칭
