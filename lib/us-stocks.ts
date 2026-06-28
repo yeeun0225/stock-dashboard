@@ -24,6 +24,7 @@ export const US_SECTORS: SectorGroup[] = [
       { name: 'Qualcomm', ticker: 'QCOM' },
       { name: 'Texas Inst.', ticker: 'TXN' },
       { name: 'Micron', ticker: 'MU' },
+      { name: 'SanDisk', ticker: 'SNDK' },
       { name: 'Intel', ticker: 'INTC' },
       { name: 'Applied Mat.', ticker: 'AMAT' },
       { name: 'Lam Research', ticker: 'LRCX' },
